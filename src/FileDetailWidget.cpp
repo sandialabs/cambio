@@ -267,7 +267,7 @@ FileDetailWidget::FileDetailWidget( QWidget *parent, Qt::WindowFlags f )
   alterlayout->addWidget( cropChannels, 0, 1, Qt::AlignLeft );
   
 
-  QPushButton *energyCal = new QPushButton( "Energy Cal (not complete)" );
+  QPushButton *energyCal = new QPushButton( "Energy Cal (under development)" );
   energyCal->setToolTip( "Under Construction - allows you to view/change energy callibration" );
   alterlayout->addWidget( energyCal, 0, 1, Qt::AlignLeft );
   

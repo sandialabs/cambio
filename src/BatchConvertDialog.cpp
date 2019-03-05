@@ -70,7 +70,7 @@ namespace
       case kExploraniumGr130v0SpectrumFile: return "GR130 DAT";
       case kExploraniumGr135v2SpectrumFile: return "GR135 DAT";
       case kIaeaSpeSpectrumFile:            return "IAEA SPE";
-#if( ENABLE_D3_CHART_EXPORTING )
+#if( SpecUtils_ENABLE_D3_CHART )
       case kD3HtmlSpectrumFile:             return "HTML";
 #endif
       case kNumSaveSpectrumAsType:          return "";
@@ -446,7 +446,7 @@ void BatchConvertDialog::convert()
       case kExploraniumGr130v0SpectrumFile: out += ".dat"; break;
       case kExploraniumGr135v2SpectrumFile: out += ".dat"; break;
       case kIaeaSpeSpectrumFile:            out += ".dat"; break;
-#if( ENABLE_D3_CHART_EXPORTING )
+#if( SpecUtils_ENABLE_D3_CHART )
       case kD3HtmlSpectrumFile:             out += ".html"; break;
 #endif
       case kBinaryIntSpcSpectrumFile: case kBinaryFloatSpcSpectrumFile:
@@ -550,7 +550,7 @@ void BatchConvertDialog::convert()
       case kBinaryFloatSpcSpectrumFile:
       case kAsciiSpcSpectrumFile:
       case kIaeaSpeSpectrumFile:
-#if( ENABLE_D3_CHART_EXPORTING )
+#if( SpecUtils_ENABLE_D3_CHART )
       case kD3HtmlSpectrumFile:
 #endif
       {
@@ -601,7 +601,7 @@ void BatchConvertDialog::convert()
                 wrote = meas.write_ascii_spc( output, samplenumset, detnumset );
               else if( type == kIaeaSpeSpectrumFile )
                 wrote = meas.write_iaea_spe( output, samplenumset, detnumset );
-#if( ENABLE_D3_CHART_EXPORTING )
+#if( SpecUtils_ENABLE_D3_CHART )
               else if( type == kD3HtmlSpectrumFile )
                   wrote = meas.write_d3_html( output, D3SpectrumExport::D3SpectrumChartOptions{}, samplenumset, detnumset );
 #endif

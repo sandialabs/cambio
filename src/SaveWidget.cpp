@@ -75,7 +75,7 @@ const char *description( const SaveSpectrumAsType type )
     case kExploraniumGr130v0SpectrumFile: return "GR130 DAT";
     case kExploraniumGr135v2SpectrumFile: return "GR135 DAT";
     case kIaeaSpeSpectrumFile:            return "SPE IAEA";
-#if( ENABLE_D3_CHART_EXPORTING )
+#if( SpecUtils_ENABLE_D3_CHART )
     case kD3HtmlSpectrumFile:             return "HTML";
 #endif
     case kNumSaveSpectrumAsType:      return "";
@@ -83,7 +83,7 @@ const char *description( const SaveSpectrumAsType type )
   return "";
 }//const char *descriptionText( const SaveSpectrumAsType type )
 
-#if( ENABLE_D3_CHART_EXPORTING )
+#if( SpecUtils_ENABLE_D3_CHART )
 bool writeIndividualHtmlSpectraToOutputFile( std::ofstream &output,
                                               const MeasurementInfo &meas,
                                               const std::set<int> samplenums,
@@ -228,7 +228,7 @@ bool writeIndividualHtmlSpectraToOutputFile( std::ofstream &output,
   
   return !output.bad();
 }//writeIndividualHtmlSpectraToOutputFile(...)
-#endif //#if( ENABLE_D3_CHART_EXPORTING )
+#endif //#if( SpecUtils_ENABLE_D3_CHART )
   
   
 bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
@@ -310,7 +310,7 @@ bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
     case k2012N42SpectrumFile:
     case kExploraniumGr130v0SpectrumFile:
     case kExploraniumGr135v2SpectrumFile:
-#if( ENABLE_D3_CHART_EXPORTING )
+#if( SpecUtils_ENABLE_D3_CHART )
     case kD3HtmlSpectrumFile:
 #endif
     {
@@ -341,7 +341,7 @@ bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
           case kExploraniumGr130v0SpectrumFile: ok = info.write_binary_exploranium_gr130v0( output ); break;
           case kExploraniumGr135v2SpectrumFile: ok = info.write_binary_exploranium_gr135v2( output ); break;
           
-#if( ENABLE_D3_CHART_EXPORTING )
+#if( SpecUtils_ENABLE_D3_CHART )
           case kD3HtmlSpectrumFile:
           {
             //If sample numbers are all sample numbers in the file, and there is one
@@ -509,7 +509,7 @@ bool writeIndividualSpectraToOutputFile( const SaveSpectrumAsType format,
     case k2012N42SpectrumFile:            ok = info.write_2012_N42( output );   break;
     case kExploraniumGr130v0SpectrumFile: ok = info.write_binary_exploranium_gr130v0( output );   break;
     case kExploraniumGr135v2SpectrumFile: ok = info.write_binary_exploranium_gr135v2( output );   break;
-#if( ENABLE_D3_CHART_EXPORTING )
+#if( SpecUtils_ENABLE_D3_CHART )
     case kD3HtmlSpectrumFile:
     {
       if( samplenums.size() > 100 )
@@ -746,6 +746,10 @@ SaveWidget::SaveWidget( QWidget *parent , Qt::WindowFlags f )
   QLabel *label = new QLabel( "Directory To Save To:" );
   namelayout->addWidget( label, 0, 0, Qt::AlignLeft );
   m_saveDirectory = new QLineEdit;
+#if defined(__APPLE__) && !defined(IOS)
+  m_saveDirectory->setEnabled( false );
+  m_saveDirectory->setText( "Downloads" );
+#endif
   namelayout->addWidget( m_saveDirectory, 1, 0 );
   QPushButton *browse = new QPushButton( "Browse..." );
   namelayout->addWidget( browse, 2, 0, Qt::AlignRight );
@@ -866,7 +870,7 @@ void SaveWidget::save()
   }//if( !!m_measurment || row < 0 || row >= kNumSaveSpectrumAsType )
   
   
-  const QString initialDir = m_saveDirectory->text();
+  const QString initialDir = saveDirectory();
   
   QDir dir( initialDir );
   if( !dir.exists() || !dir.isReadable() )
@@ -1157,7 +1161,7 @@ void SaveWidget::save()
 
 void SaveWidget::checkValidDirectory()
 {
-  const QString initialDir = m_saveDirectory->text();
+  const QString initialDir = saveDirectory();
   
   QDir dir( initialDir );
   if( dir.exists() && dir.isReadable() )
@@ -1178,11 +1182,28 @@ void SaveWidget::checkValidDirectory()
 }//void checkValidDirectory()
 
 
+QString SaveWidget::saveDirectory()
+{
+  QString p = m_saveDirectory->text();
+  
+#if defined(__APPLE__) && !defined(IOS)
+  if( p == "Downloads" )
+    return QStandardPaths::writableLocation( QStandardPaths::DownloadLocation );
+#endif
+  
+  QDir savedir( p );
+  
+  if( !savedir.exists() || !savedir.isReadable() )
+    return "";
+  
+  return p;
+}//QString saveDirectory()
+
 
 void SaveWidget::browseForDirectory()
 {
   const QString caption = "Select directory to save results to";
-  const QString initialDir = m_saveDirectory->text();
+  const QString initialDir = saveDirectory();
   QFileDialog dialog( this, caption, initialDir );
   dialog.setFileMode( QFileDialog::DirectoryOnly );
   dialog.setViewMode( QFileDialog::Detail );
@@ -1209,7 +1230,7 @@ void SaveWidget::browseForDirectory()
 #endif
     m_saveDirectory->setText( selecteddirs[0] );
   }//if( selecteddirs.length() > 0 )
-}//void browseForDirectory()
+}//void browseForDirectory()e
 
 
 void SaveWidget::formatChanged()
@@ -1416,7 +1437,7 @@ void SaveWidget::formatChanged()
              " be lost";
       break;
       
-#if( ENABLE_D3_CHART_EXPORTING )
+#if( SpecUtils_ENABLE_D3_CHART )
     case kD3HtmlSpectrumFile:
       if( currname.size() )
         currname += ".html";
@@ -1532,20 +1553,18 @@ void SaveWidget::updateDisplay( std::shared_ptr<MeasurementInfo> meas,
   m_detectors.swap( detectors );
   m_measurment = meas;
   
-  m_saveButton->setEnabled( !!m_measurment );
+  QString path = saveDirectory();
+
+  m_saveButton->setEnabled( !!m_measurment && !path.isEmpty() );
   
   if( !m_measurment )
     return;
   
   m_saveName->setText( meas->filename().c_str() );
 
-  QString path = m_saveDirectory->text();
 #if defined(__APPLE__) && !defined(IOS)
-  if( path.size() < 2 )
-  {
-    const QString downloadsFolder = QStandardPaths::writableLocation( QStandardPaths::DownloadLocation );
-    m_saveDirectory->setText( downloadsFolder );
-  }
+  if( path.isEmpty() )
+    m_saveDirectory->setText( "Downloads" );
 #else
   QSettings settings;
   if( path.size() < 2 )
@@ -1574,7 +1593,7 @@ void SaveWidget::updateDisplay( std::shared_ptr<MeasurementInfo> meas,
   //Apple sandbox means we wont be able to access the same a directory next time
   //  we open - so dont bother saving it
 #else
-  if( path != m_saveDirectory->text() )
+  if( path != saveDirectory() )
   {
     settings.setValue( "SaveFileDir", path );
     m_saveDirectory->setText( path );

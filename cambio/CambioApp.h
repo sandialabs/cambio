@@ -24,6 +24,7 @@
 #include <QString>
 #include <QApplication>
 
+#include "Cambio_config.h"
 #include "cambio/MainWindow.h"
 
 class QEvent;
@@ -67,7 +68,7 @@ public:
 public slots:
   void loadFile( const QString &fileName );
   
-#if( !defined(ANDROID) && !defined(IOS) )
+#if( !defined(ANDROID) && !defined(IOS) && SHOW_CAMBIO_SPLASH_SCREEN )
   void createSplashScreen();
   void startSplashScreenFade();
   void deleteSplashScreen();

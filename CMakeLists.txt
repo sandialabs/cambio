@@ -6,12 +6,11 @@ set( CMAKE_CXX_STANDARD 11 )
 set( CMAKE_CXX_STANDARD_REQUIRED ON )
 
 #Cambio can be built as a GUI program, and/or a command line executable to
-#  convert file formats.  In principle the command line version doesnt depend
-#  on Qt to compile/run, but I havent yet bothered to get rid of the Qt
-#  dependancy in this CMakeLists.txt file, when you only build the command line
-#  version (added command line 20141111)
+#  convert file formats.
 option( BUILD_CAMBIO_GUI "Builds the GUI component of Cambio" ON )
 option( BUILD_CAMBIO_COMMAND_LINE "Builds the command line component of Cambio" ON )
+option( SHOW_CAMBIO_SPLASH_SCREEN "Show splash screen on application start" OFF )
+
 set( Cambio_VERSION Development CACHE STRING "Cambio Version" )
 
 
@@ -73,8 +72,6 @@ endif()
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-
-set( SPECTRUM_DATA_STRUCTS_NO_BOOST_LIB OFF )
 
 set( Boost_USE_STATIC_LIBS ON )
 set( CMAKE_FIND_LIBRARY_SUFFIXES .a .la .lib ${CMAKE_FIND_LIBRARY_SUFFIXES} )
@@ -173,7 +170,7 @@ if( NOT BUILD_CAMBIO_GUI )
     SET( CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -static-libgcc" )
     SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -static-libgcc" )
     SET( CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc" )
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+    set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static" )
     target_link_libraries( ${PROJECT_NAME} PRIVATE -static-libgcc -static-libstdc++ )
   endif( ${CMAKE_SYSTEM_NAME} STREQUAL "Linux" )
 endif( NOT BUILD_CAMBIO_GUI )
@@ -209,14 +206,14 @@ ENDIF()
 
 
 if(WIN32)
-  #set( Boost_INCLUDE_DIR "C:\\Boost\\include\\boost-1_55" )
-  set( Boost_INCLUDE_DIR "C:\\Boost1.44\\include" )
-  set( BOOST_LIBRARYDIR "C:\\Boost1.44\\lib" )
   set( Boost_USE_STATIC_RUNTIME ON )
-  set( BOOST_ROOT "C:\\Boost1.44" )
   set( Boost_DETAILED_FAILURE_MSG ON )
-  set( Boost_ADDITIONAL_VERSIONS 1.44 1.44.0 )
-  set( Boost_LIBRARY_DIR "C:\\Boost1.44\\lib" )
+#  set( Boost_INCLUDE_DIR "C:\\Boost\\include\\boost-1_55" )
+#  set( Boost_INCLUDE_DIR "C:\\Boost1.44\\include" )
+#  set( BOOST_LIBRARYDIR "C:\\Boost1.44\\lib" )
+  set( BOOST_ROOT "C:\\Boost1.44" )
+  set( Boost_ADDITIONAL_VERSIONS 1.44 1.44.0 1.65_1 )
+#  set( Boost_LIBRARY_DIR "C:\\Boost1.44\\lib" )
 endif()
 if( APPLE AND NOT IOS )
   #set( Boost_INCLUDE_DIR "/Users/wcjohns/install/boost_1_56_0_osx/include" )
@@ -229,10 +226,6 @@ endif()
 if( ANDROID )
 	set( Boost_INCLUDE_DIR "/Users/wcjohns/install/android/armstandalone15/sysroot/usr/include" )
 endif()
-
-if( SPECTRUM_DATA_STRUCTS_NO_BOOST )
-  target_link_libraries( ${PROJECT_NAME} ${Boost_LIBRARIES} )
-endif( SPECTRUM_DATA_STRUCTS_NO_BOOST )
 
 
 # Use the Widgets module from Qt 5.
@@ -345,37 +338,16 @@ else( SPECTRUM_DATA_STRUCTS_NO_BOOST_LIB )
 endif( SPECTRUM_DATA_STRUCTS_NO_BOOST_LIB )
 
 
-link_directories(${Boost_LIBRARY_DIRS})
-
 add_subdirectory( SpecUtils )
-
 
 include_directories( ${CMAKE_SOURCE_DIR} )
 include_directories( ${CMAKE_BINARY_DIR} )
-include_directories( ${Boost_INCLUDE_DIR} )
-include_directories( ${SpecUtils_INC_DIRS} )
-
 
 configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/cambio/Cambio_config.h.in
   ${CMAKE_BINARY_DIR}/Cambio_config.h )
 
-
-if( ANDROID )
-  set( SPEC_UTILS_LIBRARY "${CMAKE_BINARY_DIR}/SpecUtils/lib/libSpecUtils.a" )
-else()
-  if( WIN32 )
-    #find_library( SPEC_UTILS_LIBRARY NAMES SpecUtils HINTS "${CMAKE_BINARY_DIR}/SpecUtils/lib" )
-    #message( "SPEC_UTILS_LIBRARY=${SPEC_UTILS_LIBRARY}")
-	message( "Currently using hack to link to SpecUtils.lib" )
-	set( SPEC_UTILS_LIBRARY "${CMAKE_BINARY_DIR}/SpecUtils/lib/MinSizeRel/libSpecUtils.lib" )
-  else()
-    set( SPEC_UTILS_LIBRARY "SpecUtils" )
-    #set( SPEC_UTILS_LIBRARY "${CMAKE_BINARY_DIR}/SpecUtils/lib/Release/libSpecUtils.lib" )
-  endif()
-endif()
-
 target_link_libraries( ${PROJECT_NAME} PRIVATE Threads::Threads )
-target_link_libraries( ${PROJECT_NAME} PRIVATE ${Boost_LIBRARIES} ${SpecUtils_LIBS} )
+target_link_libraries( ${PROJECT_NAME} PRIVATE ${Boost_LIBRARIES} SpecUtils )
 
 #Generate pro files so we can use Qt Creator to build apps for Android
 #  and iOS (a work in progress)

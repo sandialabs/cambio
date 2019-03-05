@@ -31,7 +31,9 @@
 
 #include "cambio/CambioApp.h"
 #include "cambio/sandia_logo.h"
+#if( !defined(ANDROID) && !defined(IOS) && SHOW_CAMBIO_SPLASH_SCREEN )
 #include "cambio/splash_screen.h"
+#endif
 
 #if( defined(ANDROID) )
 #include <QAndroidJniObject>
@@ -56,7 +58,7 @@ CambioApp::CambioApp( int &argc, char **argv )
   : QApplication( argc, argv ),
     m_window( new MainWindow() )
 {
-#if( !defined(ANDROID) && !defined(IOS) )
+#if( !defined(ANDROID) && !defined(IOS) && SHOW_CAMBIO_SPLASH_SCREEN  )
   createSplashScreen();
 #endif
   
@@ -82,14 +84,14 @@ MainWindow *CambioApp::mainWindow()
 }
 
 
-#if( !defined(ANDROID) && !defined(IOS) )
+#if( !defined(ANDROID) && !defined(IOS) && SHOW_CAMBIO_SPLASH_SCREEN )
 void CambioApp::createSplashScreen()
 {
   if( m_splash )
     return;
   
   QPixmap pixmap;
-  pixmap.loadFromData( splash_screen_png, splash_screen_png_len );
+  pixmap.loadFromData( splash_screen_png, splash_screen_png_len );  //182 kb
   
   m_splash = new QSplashScreen( pixmap );
   

@@ -61,6 +61,11 @@ public slots:
   void formatChanged();
   void checkValidDirectory();
   
+  /** Returns the currently selected save path.
+   Returns empty string on invalid path.
+   */
+  QString saveDirectory();
+  
 protected:
   QGridLayout *m_layout;
   QLineEdit *m_saveDirectory;

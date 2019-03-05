@@ -32,7 +32,7 @@
 using namespace std;
 namespace po = boost::program_options;
 
-#if( ENABLE_D3_CHART_EXPORTING )
+#if( SpecUtils_ENABLE_D3_CHART )
 #include "SpecUtils/D3SpectrumExport.h"
 
 namespace {
@@ -103,7 +103,7 @@ int run_command_util( const int argc, char *argv[] )
 //  store(command_line_parser(args).options(desc).run(), vm);
   
   bool force_writing, summ_meas_for_single_out, include_all_cal_spec;
-#if( ENABLE_D3_CHART_EXPORTING )
+#if( SpecUtils_ENABLE_D3_CHART )
   string html_to_include = "all";
 #endif
   
@@ -132,7 +132,7 @@ int run_command_util( const int argc, char *argv[] )
               " CHN (binary integer variant), SPC (defaults to int variant),"
               " INTSPC, FLTSPC, SPE (IAEA format), asciispc (ASCII version of"
               " SPC), gr130 (256 channel binary format)"
-#if( ENABLE_D3_CHART_EXPORTING )
+#if( SpecUtils_ENABLE_D3_CHART )
               ", html (webpage plot), json (chart data in json format, equiv to '--format=html --html-output=json')"
 #endif
      )
@@ -172,7 +172,7 @@ int run_command_util( const int argc, char *argv[] )
      " on results without testing the output.  If the input detector is"
      " determined to be the same as the output detector, nothing is changed."
      )
-#if( ENABLE_D3_CHART_EXPORTING )
+#if( SpecUtils_ENABLE_D3_CHART )
   ("html-output", po::value<string>(&html_to_include)->default_value("all"),
      "Only applies when saving to the HTML format.  The components to include"
      " in the output file.  Options are \n\t"
@@ -299,7 +299,7 @@ int run_command_util( const int argc, char *argv[] )
   str_to_save_type["dat"]       = kExploraniumGr135v2SpectrumFile;
   str_to_save_type["spe"]       = kIaeaSpeSpectrumFile;
 
-#if( ENABLE_D3_CHART_EXPORTING )
+#if( SpecUtils_ENABLE_D3_CHART )
   str_to_save_type["html"]       = kD3HtmlSpectrumFile;
   str_to_save_type["json"]       = kD3HtmlSpectrumFile;
   str_to_save_type["js"]         = kD3HtmlSpectrumFile;
@@ -489,7 +489,7 @@ int run_command_util( const int argc, char *argv[] )
   
   string ending = suggestedNameEnding( format );
   
- #if( ENABLE_D3_CHART_EXPORTING )
+ #if( SpecUtils_ENABLE_D3_CHART )
   if( format == kD3HtmlSpectrumFile )
   {
     UtilityFunctions::to_lower( html_to_include );
@@ -987,7 +987,7 @@ int run_command_util( const int argc, char *argv[] )
             wrote = info.write_binary_exploranium_gr135v2( output );
           break;
             
-#if( ENABLE_D3_CHART_EXPORTING )
+#if( SpecUtils_ENABLE_D3_CHART )
           case kD3HtmlSpectrumFile:
           {
             const vector<std::shared_ptr<const Measurement> > measurements = info.measurements();
@@ -1137,7 +1137,7 @@ int run_command_util( const int argc, char *argv[] )
             }
             break;
           }
-#endif  //#if( ENABLE_D3_CHART_EXPORTING )
+#endif  //#if( SpecUtils_ENABLE_D3_CHART )
             
           case kChnSpectrumFile:
           case kBinaryIntSpcSpectrumFile:

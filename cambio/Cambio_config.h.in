@@ -23,6 +23,7 @@
 
 #cmakedefine01 BUILD_CAMBIO_GUI
 #cmakedefine01 BUILD_CAMBIO_COMMAND_LINE
+#cmakedefine01 SHOW_CAMBIO_SPLASH_SCREEN
 #cmakedefine Cambio_VERSION "@Cambio_VERSION@"
 
 #endif // Cambio_config_h
