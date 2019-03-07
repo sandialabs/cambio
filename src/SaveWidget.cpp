@@ -791,14 +791,26 @@ SaveWidget::SaveWidget( QWidget *parent , Qt::WindowFlags f )
   m_layout->setRowStretch( 0, 3 );
   m_layout->setRowStretch( 1, 2 );
   
-  QSize itemsize;
-#if defined(__APPLE__) && !defined(IOS)
-  itemsize.setHeight( 18 );
-  QFont serifFont("Helvetica", 14, QFont::Bold);
-#else
-  itemsize.setHeight( 30 );
-  QFont serifFont("Helvetica", 20, QFont::Bold);
-#endif
+//#if defined(__APPLE__) && !defined(IOS)
+//  QFont serifFont("Helvetica", 14, QFont::Bold);
+//#else
+//  QFont serifFont("Helvetica", 20, QFont::Bold);
+//#endif
+  QFont serifFont("Helvetica", 16, QFont::Bold);
+  
+  QFontMetricsF metric( serifFont );
+  
+  qreal maxheight = 0.0, maxwidth = 0.0;
+  for( SaveSpectrumAsType type = SaveSpectrumAsType(0);
+      type < kNumSaveSpectrumAsType;
+      type = SaveSpectrumAsType(type+1) )
+  {
+    QRectF bb = metric.boundingRect( description(type) );
+    maxheight = std::max( maxheight, bb.height() );
+    maxwidth = std::max( maxwidth, bb.width() );
+  }
+  
+  QSize itemsize( static_cast<int>( ceil(maxwidth) ), 4 + static_cast<int>( ceil(maxheight) ) );
   
   for( SaveSpectrumAsType type = SaveSpectrumAsType(0);
        type < kNumSaveSpectrumAsType;
@@ -810,6 +822,7 @@ SaveWidget::SaveWidget( QWidget *parent , Qt::WindowFlags f )
     item->setSizeHint( itemsize );
     m_saveAsType->addItem( item );
   }//for( loop over SaveSpectrumAsType )
+  
   m_saveAsType->setSpacing( 2 );
   m_saveAsType->setUniformItemSizes( true );
   m_saveAsType->setSelectionRectVisible( true );

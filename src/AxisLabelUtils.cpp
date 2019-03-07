@@ -3,6 +3,7 @@
 
 #include <QDebug>
 #include <QString>
+#include <QFontMetricsF>
 #include <QtCharts/QCategoryAxis>
 
 #include "cambio/AxisLabelUtils.h"
@@ -17,17 +18,23 @@ TickLabel::TickLabel( double v, TickLength length, const QString &l )
 
 
 std::vector<TickLabel> getXAxisLabelTicks( const QCategoryAxis *axis,
-                                            const double widthpx )
+                                           const double widthpx )
 {
   std::vector<TickLabel> ticks;
+  
   
   //This function equivalentish to WAxis::getLabelTicks(...) but makes it so
   //  the x axis labels (hopefully) always line up nicely where we want them
   //  e.g. kinda like multiple of 5, 10, 25, 50, 100, etc.
   static double EPSILON = 1E-3;
   
-  const double fontPointSize = axis->labelsFont().pointSizeF();
-  const double labelSpacePx = (fontPointSize <= 0.0 ? 75.0 : (6.0*fontPointSize));  //InterSpec uses a flat 50.0 for this
+  //qreal avrgcharwidth = mettric.averageCharWidth();
+  //if( avrgcharwidth < 0 )
+  //  avrgcharwidth = 8.0;
+  //const double labelSpacePx = 10*avrgcharwidth;  //InterSpec uses a flat 50.0 for this
+  QFontMetricsF mettric( axis->labelsFont() );
+  QRectF maxsize = mettric.boundingRect("3049.13");  //an example of probably the longest label we will see
+  const double labelSpacePx = 25 + maxsize.width();
   
   const double rendermin = axis->min();
   const double rendermax = axis->max();

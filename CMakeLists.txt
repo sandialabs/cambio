@@ -34,28 +34,21 @@ ENDIF(NOT CMAKE_BUILD_TYPE)
 
 if(WIN32)
     set(Boost_DEBUG on)
-    set( MyQT_DIR "C:\\Qt5.3_static_min" )
-    set( Boost_USE_STATIC_RUNTIME ON )
+    set( MyQT_DIR "C:/install/msvc2017/x64/Qt_5.12_static" )
     set( CMAKE_CXX_FLAGS "/MT ${CMAKE_CXX_FLAGS}" )
-    set( Boost_INCLUDE_DIR "C:\\Boost1.55\\include\\boost-1_55" )
-    set( BOOST_LIBRARYDIR "C:\\Boost1.55\\lib" )
+    set( Boost_DETAILED_FAILURE_MSG ON )
+    set( BOOST_ROOT "C:/install/msvc2017/x64/boost_1_65_1" )
+    set( BOOST_PREFIX ${BOOST_ROOT} )
+    set( Boost_ADDITIONAL_VERSIONS 1.55 1.55.0 1.65.1 )
+   
     set( Boost_USE_STATIC_RUNTIME ON )
-    set( BOOST_ROOT "C:\\Boost1.55" )
-    #set( Boost_DETAILED_FAILURE_MSG ON )
-    set( Boost_ADDITIONAL_VERSIONS 1.55 1.55.0 )
-    set( Boost_LIBRARY_DIR "C:\\Boost1.55\\lib" )
-
 	set(CompilerFlags
-        CMAKE_CXX_FLAGS
-        CMAKE_CXX_FLAGS_DEBUG
-        CMAKE_CXX_FLAGS_RELEASE
-        CMAKE_C_FLAGS
-        CMAKE_C_FLAGS_DEBUG
-        CMAKE_C_FLAGS_RELEASE
+        CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELEASE
+        CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_RELWITHDEBINFO
         )
-foreach(CompilerFlag ${CompilerFlags})
-  string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
-endforeach()
+    foreach(CompilerFlag ${CompilerFlags})
+        string(REGEX REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
+    endforeach()
 endif()
  
 if( APPLE AND BUILD_CAMBIO_GUI )
@@ -90,12 +83,22 @@ if( BUILD_CAMBIO_GUI )
   set( CMAKE_PREFIX_PATH ${MyQT_DIR} )
   set( CMAKE_PREFIX_PATH "${MyQT_DIR}/lib/cmake/Qt5" )
 
-  set( REQUIRED_QT_VERSION "5.11.1" )
+  if(WIN32)
+    #set( REQUIRED_QT_VERSION "5.12" )
+  else()
+    set( REQUIRED_QT_VERSION "5.11.1" )
+  endif()
+
   #find_package( Qt5 ${REQUIRED_QT_VERSION} REQUIRED NO_MODULE COMPONENTS Widgets Charts )
-  find_package(Qt5 COMPONENTS Core Widgets Charts MacExtras PrintSupport REQUIRED)
+  find_package(Qt5 COMPONENTS Core Widgets Charts PrintSupport REQUIRED)
 
+  if(WIN32)
+    find_package(Qt5 COMPONENTS WinExtras REQUIRED)
+  else()
+    find_package(Qt5 COMPONENTS MacExtras REQUIRED)
+  endif()
 
-  add_definitions( ${Qt5Widgets_DEFINITIONS} )
+  #add_definitions( ${Qt5Widgets_DEFINITIONS} )
   #Qt5Widgets_COMPILE_DEFINITIONS List of definitions for use with the COMPILE_DEFINITIONS target property.
 
   IF( WIN32 )
@@ -204,17 +207,6 @@ IF( APPLE AND NOT IOS AND BUILD_CAMBIO_GUI )
 ENDIF()
 
 
-
-if(WIN32)
-  set( Boost_USE_STATIC_RUNTIME ON )
-  set( Boost_DETAILED_FAILURE_MSG ON )
-#  set( Boost_INCLUDE_DIR "C:\\Boost\\include\\boost-1_55" )
-#  set( Boost_INCLUDE_DIR "C:\\Boost1.44\\include" )
-#  set( BOOST_LIBRARYDIR "C:\\Boost1.44\\lib" )
-  set( BOOST_ROOT "C:\\Boost1.44" )
-  set( Boost_ADDITIONAL_VERSIONS 1.44 1.44.0 1.65_1 )
-#  set( Boost_LIBRARY_DIR "C:\\Boost1.44\\lib" )
-endif()
 if( APPLE AND NOT IOS )
   #set( Boost_INCLUDE_DIR "/Users/wcjohns/install/boost_1_56_0_osx/include" )
 endif()
@@ -231,42 +223,33 @@ endif()
 # Use the Widgets module from Qt 5.
 if( BUILD_CAMBIO_GUI )
   if(WIN32)
-    #Note, even this manually speciying lib files doesnt cause static linking
-    if( CMAKE_BUILD_TYPE EQUAL "DEBUG" )
-      set( QtChartDir "C:\\Qt5.3_static" )
-      target_link_libraries( ${PROJECT_NAME} "${QtChartDir}\\lib\\tCommercialChartd.lib"  )
-      target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\lib\\Qt5Cored.lib"  )
-      target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\lib\\Qt5Guid.lib"  )
-      target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\lib\\Qt5Widgetsd.lib"  )
-      target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\lib\\qtmaind.lib"  )
-    else()
-      set( QtChartDir "C:\\Qt5.3_static_min" )
-      target_link_libraries( ${PROJECT_NAME} "${QtChartDir}\\lib\\QtCommercialChart.lib"  )
-      target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\lib\\Qt5Core.lib"  )
-      target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\lib\\Qt5Gui.lib"  )
-      target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\lib\\Qt5Widgets.lib"  )
-      target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\lib\\qtmain.lib"  )
+    target_link_libraries( ${PROJECT_NAME} PRIVATE Qt5::Core Qt5::Widgets Qt5::Charts Qt5::PrintSupport Qt5::WinExtras )
 
-      target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\lib\\Qt5PlatformSupport.lib"  )
-      target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\plugins\\platforms\\qwindows.lib"  )
-      target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\lib\\Qt5WinExtras.lib"  )
+    #Note, Qt CMake doesnt pull in the required additional libraries for statically
+    #  linking, so we have to do this manually (libraries determined by trial and error)
+	  set( LIB_TYPE_POSTFIX "" )
+      if( CMAKE_BUILD_TYPE EQUAL "DEBUG" )
+	    set( LIB_TYPE_POSTFIX "d" )
+	  endif()
 
+	  target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}\\lib\\Qt5EventDispatcherSupport${LIB_TYPE_POSTFIX}.lib" )
+	  target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}\\lib\\Qt5ThemeSupport${LIB_TYPE_POSTFIX}.lib" )
+	  target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}\\lib\\Qt5WindowsUIAutomationSupport${LIB_TYPE_POSTFIX}.lib" )
+    
+	  target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}\\lib\\qtmain${LIB_TYPE_POSTFIX}.lib"  )
+	  target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}\\lib\\qtlibpng${LIB_TYPE_POSTFIX}.lib" )
+	  target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}\\lib\\qtharfbuzz${LIB_TYPE_POSTFIX}.lib" )
+	  target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}\\lib\\Qt5FontDatabaseSupport${LIB_TYPE_POSTFIX}.lib" )
+	  target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}\\lib\\qtpcre2${LIB_TYPE_POSTFIX}.lib" )
+	  target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}\\lib\\qtfreetype${LIB_TYPE_POSTFIX}.lib" )
+
+    target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}\\plugins\\platforms\\qwindows${LIB_TYPE_POSTFIX}.lib"  )
+	
 	  #Print support needed by qcustomplot
-	  target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\lib\\Qt5PrintSupport.lib"  )
-	  target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\plugins\\printsupport\\windowsprintersupport.lib"  )
-	  
+	  #target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\lib\\Qt5PrintSupport.lib"  )
+	  #target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\plugins\\printsupport\\windowsprintersupport.lib"  )
 
-      target_link_libraries( ${PROJECT_NAME} "imm32.lib" )
-      target_link_libraries( ${PROJECT_NAME} "ws2_32.lib" )
-      target_link_libraries( ${PROJECT_NAME} "winmm.lib" )
-    endif()
-
-    include_directories( "${QtChartDir}\\include" )
-    include_directories( "${MyQT_DIR}\\include" )
-    include_directories( "${MyQT_DIR}\\include\\QtCore" )
-    include_directories( "${MyQT_DIR}\\include\\QtCharts" )
-    include_directories( "${MyQT_DIR}\\include\\QtGui" )
-    include_directories( "${MyQT_DIR}\\include\\QtWidgets" )
+    target_link_libraries( ${PROJECT_NAME} PRIVATE "imm32.lib" "Ws2_32.lib" "winmm.lib" "Mincore.lib" "Dwmapi.lib" "Wtsapi32.lib" )
   else()
     link_directories( ${MyQT_DIR}/lib )
     link_directories( ${MyQT_DIR}/plugins/platforms )
@@ -340,8 +323,7 @@ endif( SPECTRUM_DATA_STRUCTS_NO_BOOST_LIB )
 
 add_subdirectory( SpecUtils )
 
-include_directories( ${CMAKE_SOURCE_DIR} )
-include_directories( ${CMAKE_BINARY_DIR} )
+target_include_directories( ${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} )
 
 configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/cambio/Cambio_config.h.in
   ${CMAKE_BINARY_DIR}/Cambio_config.h )

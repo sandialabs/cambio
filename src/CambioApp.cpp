@@ -70,6 +70,8 @@ CambioApp::CambioApp( int &argc, char **argv )
 #if( defined(ANDROID) )
   QAndroidJniObject::callStaticMethod<void>("org/sandia/cambio/CambioActivity", "openFileIfNeedBe" );
 #endif
+  
+  //QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 }//CambioApp constructor
 
 
