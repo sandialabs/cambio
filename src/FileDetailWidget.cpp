@@ -269,7 +269,7 @@ FileDetailWidget::FileDetailWidget( QWidget *parent, Qt::WindowFlags f )
 
   QPushButton *energyCal = new QPushButton( "Energy Cal (under development)" );
   energyCal->setToolTip( "Under Construction - allows you to view/change energy callibration" );
-  alterlayout->addWidget( energyCal, 0, 1, Qt::AlignLeft );
+  alterlayout->addWidget( energyCal, 0, 2, Qt::AlignLeft );
   
 
   QWidget *spacer = new QWidget();

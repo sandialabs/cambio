@@ -535,7 +535,7 @@ void SpectrumView::calcAndSetYRange()
     if( isLogY() )
     {
       ymin = std::max( ymin/10.0, 0.1 );
-      ymax = std::max( 10.0*ymax, 0.1 );
+      ymax = std::max( 2.0*ymax, 0.1 );
     }else
     {
       const double yrange = (ymax-ymin);

@@ -93,7 +93,7 @@ bool writeIndividualHtmlSpectraToOutputFile( std::ofstream &output,
   const std::vector<int> &detnumsvect = meas.detector_numbers();
   detnums.insert( detnumsvect.begin(), detnumsvect.end() );
 
-#warning "Saving to HTML files could use some work.\nIf its a passthrough file and all spectra are being saved, and theres a background, then it should be a seperate line.  Similar thing for other files"
+//#warning "Saving to HTML files could use some work.\nIf its a passthrough file and all spectra are being saved, and theres a background, then it should be a seperate line.  Similar thing for other files"
   
   const char *endline = "\r\n";
   
@@ -1182,7 +1182,7 @@ void SaveWidget::checkValidDirectory()
   
 #if defined(__APPLE__) && !defined(IOS)
   const QString downloadsFolder = QStandardPaths::writableLocation( QStandardPaths::DownloadLocation );
-  m_saveDirectory->setText( downloadsFolder );
+  m_saveDirectory->setText(  "Downloads" );
 #else
   m_saveDirectory->setText( QDir::homePath() );
 #endif
@@ -1205,10 +1205,9 @@ QString SaveWidget::saveDirectory()
 #endif
   
   QDir savedir( p );
-  
   if( !savedir.exists() || !savedir.isReadable() )
     return "";
-  
+
   return p;
 }//QString saveDirectory()
 
@@ -1567,11 +1566,6 @@ void SaveWidget::updateDisplay( std::shared_ptr<MeasurementInfo> meas,
   m_measurment = meas;
   
   QString path = saveDirectory();
-
-  m_saveButton->setEnabled( !!m_measurment && !path.isEmpty() );
-  
-  if( !m_measurment )
-    return;
   
   m_saveName->setText( meas->filename().c_str() );
 
@@ -1587,6 +1581,8 @@ void SaveWidget::updateDisplay( std::shared_ptr<MeasurementInfo> meas,
      if( val.size()>2 && QDir(val).exists() )
        path = val;
 
+     QFileInfo file( path, meas->filename().c_str() );
+
      if( path.size() < 2 && file.exists() )
      {
        path = file.absolutePath();
@@ -1600,6 +1596,12 @@ void SaveWidget::updateDisplay( std::shared_ptr<MeasurementInfo> meas,
        path = QStandardPaths::writableLocation( QStandardPaths::DownloadLocation );
   }//if( m_saveDirectory->text().size() < 1 )
 #endif
+
+  QDir dir( path );
+  m_saveButton->setEnabled( !!m_measurment && dir.exists() && dir.isReadable() );
+
+  if( !m_measurment )
+    return;
 
   
 #if defined(__APPLE__) && !defined(IOS)

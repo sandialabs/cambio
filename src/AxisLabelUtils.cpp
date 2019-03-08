@@ -110,14 +110,19 @@ std::vector<TickLabel> getYAxisLabelTicks( const QT_CHARTS_NAMESPACE::QCategoryA
   const double renderymax = axis->max();
   const double range = renderymax - renderymin;
   
+  QFontMetricsF mettric( axis->labelsFont() );
+  QRectF maxsize = mettric.boundingRect( "1000" );
+  const double labelHeight = maxsize.height();
+
   const bool linear = true;
   
   if( linear )
   {
     //px_per_div: pixels between major and/or minor labels.
-    const double fontPointSize = axis->labelsFont().pointSizeF();
-    const double px_per_div = (fontPointSize <= 0.0 ? 40 : (3.0*fontPointSize));  //InterSpec uses a flat 50.0 for this
-    
+    //const double fontPointSize = axis->labelsFont().pointSizeF();
+    //const double px_per_div = (fontPointSize <= 0.0 ? 40 : (3.0*fontPointSize));  //InterSpec uses a flat 50.0 for this
+    const double px_per_div = 20 + labelHeight;
+
     //nlabel: approx number of major + minor labels we would like to have.
     const int nlabel = heightpx / px_per_div;
     
@@ -212,7 +217,8 @@ std::vector<TickLabel> getYAxisLabelTicks( const QT_CHARTS_NAMESPACE::QCategoryA
     const int numdecades = maxpower - minpower + 1;
     
     //minpxdecade: minimum number of pixels we need per decade.
-    const int minpxdecade = 25;
+    //const int minpxdecade = 10;
+    const int minpxdecade = 15 + labelHeight;
     
     //labeldelta: the number of decades between successive labeled large ticks
     //  each decade will have a large tick regardless
