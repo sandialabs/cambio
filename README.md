@@ -6,7 +6,7 @@ Cambio can be built either as a GUI that allows previewing the spectrum files, e
 ## Getting Started
 To get a pre-compiled executable, head over to the [releases](https://github.com/sandialabs/interspec/releases) tab, or to download historical version of the app see: https://hekili.ca.sandia.gov/CAMBIO/.
 
-To build:
+## Building from source
 ### Prerequisites
 To compile, you need a c++11 compiler, and:
 * [boost](https://www.boost.org/) versions 1.44 through 1.65.1 will probably 
@@ -17,8 +17,8 @@ Development is done using [Qt](https://www.qt.io/) 5.11 and 5.12.
 * [cmake](https://cmake.org/)
 * [SpecUtils](https://github.com/sandialabs/SpecUtils)
 
-### Building
-To build on Linux or macOS:
+### Compiling
+On Linux and macOS:
 ```bash
 git clone https://github.com/sandialabs/cambio
 cd cambio
