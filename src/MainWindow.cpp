@@ -36,8 +36,8 @@
 #include <QTabWidget>
 #include <QDropEvent>
 #include <QStatusBar>
+#include <QGridLayout>
 #include <QCloseEvent>
-#include <QHBoxLayout>
 #include <QGridLayout>
 #include <QMessageBox>
 #include <QPushButton>
@@ -97,7 +97,7 @@ MainWindow::MainWindow( QWidget *parent, Qt::WindowFlags flags )
     m_sampleEdit( new QLineEdit() ),
     m_totalSamples( new QLabel() ),
     m_detectors( new QWidget() ),
-    m_detectorsLayout( new QHBoxLayout() ),
+    m_detectorsLayout( new QGridLayout() ),
     m_loglin( new QToolButton ),
     m_livetime( new QLabel ),
     m_realtime( new QLabel ),
@@ -140,7 +140,11 @@ MainWindow::MainWindow( QWidget *parent, Qt::WindowFlags flags )
   
   m_detectors->setLayout( m_detectorsLayout );
   QLabel *label = new QLabel( "Detectors: " );
-  m_detectorsLayout->addWidget( label );
+  m_detectorsLayout->addWidget( label, 0, 0, Qt::AlignLeft );
+  m_detectorsLayout->setColumnStretch( 1, 1 );
+  m_detectorsLayout->setColumnStretch( 2, 1 );
+  m_detectorsLayout->setColumnStretch( 3, 1 );
+  m_detectorsLayout->setColumnStretch( 4, 1 );
   
   m_time->hide();
   m_sampleChanger->hide();
@@ -969,6 +973,8 @@ void MainWindow::displayMeasurment()
                    = m_measurment->sum_measurements( m_displayedSampleNumbers,
                                                      m_detectorsDisplayed );
     
+    qDebug() << "NumNeutrons=" << meas->neutron_counts_sum() << endl;
+    
     if( !meas && m_measurment->gamma_channel_counts().size() > 1 )
     {
       QDialog dialog;
@@ -1089,7 +1095,11 @@ void MainWindow::displayMeasurment()
     {
       QCheckBox *cb = new QCheckBox( m_measurment->detector_names()[i].c_str() );
       cb->setChecked( m_detectorsDisplayed[i] );
-      m_detectorsLayout->addWidget( cb );
+      
+      const int row = i / 4;
+      const int col = 1 + (i % 4);
+      m_detectorsLayout->addWidget( cb, row, col );
+      
       m_detCheckBox.push_back( cb );
       QWidget::connect( cb, SIGNAL(stateChanged(int)), this, SLOT(detectorsToDisplayChanged()) );
     }//for( size_t i = 0; i < m_detectorsDisplayed.size(); ++i )

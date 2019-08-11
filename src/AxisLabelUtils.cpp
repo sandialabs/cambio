@@ -22,16 +22,11 @@ std::vector<TickLabel> getXAxisLabelTicks( const QCategoryAxis *axis,
 {
   std::vector<TickLabel> ticks;
   
-  
   //This function equivalentish to WAxis::getLabelTicks(...) but makes it so
   //  the x axis labels (hopefully) always line up nicely where we want them
   //  e.g. kinda like multiple of 5, 10, 25, 50, 100, etc.
   static double EPSILON = 1E-3;
   
-  //qreal avrgcharwidth = mettric.averageCharWidth();
-  //if( avrgcharwidth < 0 )
-  //  avrgcharwidth = 8.0;
-  //const double labelSpacePx = 10*avrgcharwidth;  //InterSpec uses a flat 50.0 for this
   QFontMetricsF mettric( axis->labelsFont() );
   QRectF maxsize = mettric.boundingRect("3049.13");  //an example of probably the longest label we will see
   const double labelSpacePx = 25 + maxsize.width();

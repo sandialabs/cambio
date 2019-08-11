@@ -14,35 +14,28 @@ option( SHOW_CAMBIO_SPLASH_SCREEN "Show splash screen on application start" OFF 
 set( Cambio_VERSION Development CACHE STRING "Cambio Version" )
 
 
-if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-  #get rid of about a million warnings caused by boost foreach
-  add_definitions ("-Wno-unused-local-typedefs")
-#elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-#elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
-#elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-endif()
-
 if( BUILD_CAMBIO_GUI )
     include( cmake/addQtProject.cmake )
 endif( BUILD_CAMBIO_GUI )
 
 IF(NOT CMAKE_BUILD_TYPE)
-    SET(CMAKE_BUILD_TYPE Debug CACHE STRING
-        "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
-        FORCE)
+    SET( CMAKE_BUILD_TYPE Debug CACHE STRING "Build type: Debug Release RelWithDebInfo MinSizeRel." FORCE )
 ENDIF(NOT CMAKE_BUILD_TYPE)
 
 if(WIN32)
-    set(Boost_DEBUG on)
-    set( MyQT_DIR "C:/install/msvc2017/x64/Qt_5.12_static" )
-    set( CMAKE_CXX_FLAGS "/MT ${CMAKE_CXX_FLAGS}" )
-    set( Boost_DETAILED_FAILURE_MSG ON )
-    set( BOOST_ROOT "C:/install/msvc2017/x64/boost_1_65_1" )
+    if( NOT MyQT_DIR )
+      set( MyQT_DIR "C:/install/msvc2017/x64/Qt_5.12_static" )
+    endif()
+
+    if( NOT BOOST_ROOT )
+      set( BOOST_ROOT "C:/install/msvc2017/x64/boost_1_65_1" )
+    endif()
+
     set( BOOST_PREFIX ${BOOST_ROOT} )
-    set( Boost_ADDITIONAL_VERSIONS 1.55 1.55.0 1.65.1 )
    
     set( Boost_USE_STATIC_RUNTIME ON )
-	set(CompilerFlags
+    set( CMAKE_CXX_FLAGS "/MT ${CMAKE_CXX_FLAGS}" )
+  	set(CompilerFlags
         CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELEASE
         CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_RELWITHDEBINFO
         )
@@ -53,8 +46,9 @@ endif()
  
 if( APPLE AND BUILD_CAMBIO_GUI )
     add_definitions( -DQT_STATICPLUGIN )
-    #set( MyQT_DIR "/Users/wcjohns/install/QtMacOs5.11/5.11.1/clang_64" )
-    set( MyQT_DIR "/Users/wcjohns/install/Qt5.11.1_static" )
+    if( NOT MyQT_DIR )
+      set( MyQT_DIR "/Users/wcjohns/install/Qt5.11.1_static" )
+    endif()
 endif()
 
 if( ANDROID )
@@ -69,9 +63,6 @@ find_package(Threads REQUIRED)
 set( Boost_USE_STATIC_LIBS ON )
 set( CMAKE_FIND_LIBRARY_SUFFIXES .a .la .lib ${CMAKE_FIND_LIBRARY_SUFFIXES} )
 
-# Find includes in corresponding build directories
-set( CMAKE_INCLUDE_CURRENT_DIR ON )
-
 
 set( headers ${headers} cambio/Cambio_config.h.in )
 
@@ -83,23 +74,13 @@ if( BUILD_CAMBIO_GUI )
   set( CMAKE_PREFIX_PATH ${MyQT_DIR} )
   set( CMAKE_PREFIX_PATH "${MyQT_DIR}/lib/cmake/Qt5" )
 
-  if(WIN32)
-    #set( REQUIRED_QT_VERSION "5.12" )
-  else()
-    set( REQUIRED_QT_VERSION "5.11.1" )
-  endif()
-
-  #find_package( Qt5 ${REQUIRED_QT_VERSION} REQUIRED NO_MODULE COMPONENTS Widgets Charts )
-  find_package(Qt5 COMPONENTS Core Widgets Charts PrintSupport REQUIRED)
+  find_package( Qt5 COMPONENTS Core Widgets Charts PrintSupport REQUIRED )
 
   if(WIN32)
     find_package(Qt5 COMPONENTS WinExtras REQUIRED)
   else()
     find_package(Qt5 COMPONENTS MacExtras REQUIRED)
   endif()
-
-  #add_definitions( ${Qt5Widgets_DEFINITIONS} )
-  #Qt5Widgets_COMPILE_DEFINITIONS List of definitions for use with the COMPILE_DEFINITIONS target property.
 
   IF( WIN32 )
     SET( CMAKE_MFC_FLAG "0" )
@@ -111,7 +92,6 @@ if( BUILD_CAMBIO_GUI )
     set( cambio_ICON ${CMAKE_SOURCE_DIR}/target/osx/cambioicon.icns )
     SET( GUI_TYPE MACOSX_BUNDLE "${cambio_ICON}" )
   ENDIF( APPLE )
-
 
   set( headers
        ${headers}
@@ -186,15 +166,6 @@ IF( APPLE AND NOT IOS AND BUILD_CAMBIO_GUI )
                          MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/target/osx/Info.plist.cmake"
   )
 
-#  set(APPLE_DEV_ID "" CACHE STRING "Mac Developer ID string 'Mac Developer: John Smith (XXXXXXXXXX)'")
-#  set(APPLE_TEAM_ID "" CACHE STRING "Team ID string provisioned within Xcode / Apple's portal")
-#  if( APPLE_DEV_ID AND APPLE_TEAM_ID )
-#    set_target_properties( ${PROJECT_NAME} PROPERTIES
-#                           XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS "${CMAKE_CURRENT_SOURCE_DIR}/cambio/cambio.entitlements"
-#                           XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "${APPLE_DEV_ID}"
-#    )
-#  endif( APPLE_DEV_ID AND APPLE_TEAM_ID )
-
   set( MACOSX_BUNDLE_INFO_STRING "Cambio - Sandia National Labs, Will Johnson" )
   set( MACOSX_BUNDLE_GUI_IDENTIFIER "gov.sandia.cambio" )
   set( MACOSX_BUNDLE_LONG_VERSION_STRING "" )
@@ -205,19 +176,6 @@ IF( APPLE AND NOT IOS AND BUILD_CAMBIO_GUI )
   set( MACOSX_BUNDLE_ICON_FILE cambioicon.icns )
   set_source_files_properties( ${cambio_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources" )
 ENDIF()
-
-
-if( APPLE AND NOT IOS )
-  #set( Boost_INCLUDE_DIR "/Users/wcjohns/install/boost_1_56_0_osx/include" )
-endif()
-
-if( IOS )
-	message( "You NEED to set Boost_include dir for IOS" )
-endif()
-
-if( ANDROID )
-	set( Boost_INCLUDE_DIR "/Users/wcjohns/install/android/armstandalone15/sysroot/usr/include" )
-endif()
 
 
 # Use the Widgets module from Qt 5.
@@ -323,13 +281,12 @@ endif( SPECTRUM_DATA_STRUCTS_NO_BOOST_LIB )
 
 add_subdirectory( SpecUtils )
 
-target_include_directories( ${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} )
+target_include_directories( ${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR} )
 
 configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/cambio/Cambio_config.h.in
   ${CMAKE_BINARY_DIR}/Cambio_config.h )
 
-target_link_libraries( ${PROJECT_NAME} PRIVATE Threads::Threads )
-target_link_libraries( ${PROJECT_NAME} PRIVATE ${Boost_LIBRARIES} SpecUtils )
+target_link_libraries( ${PROJECT_NAME} PRIVATE Threads::Threads ${Boost_LIBRARIES} SpecUtils )
 
 #Generate pro files so we can use Qt Creator to build apps for Android
 #  and iOS (a work in progress)

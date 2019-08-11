@@ -791,11 +791,6 @@ SaveWidget::SaveWidget( QWidget *parent , Qt::WindowFlags f )
   m_layout->setRowStretch( 0, 3 );
   m_layout->setRowStretch( 1, 2 );
   
-//#if defined(__APPLE__) && !defined(IOS)
-//  QFont serifFont("Helvetica", 14, QFont::Bold);
-//#else
-//  QFont serifFont("Helvetica", 20, QFont::Bold);
-//#endif
   QFont serifFont("Helvetica", 16, QFont::Bold);
   
   QFontMetricsF metric( serifFont );
@@ -1240,7 +1235,17 @@ void SaveWidget::browseForDirectory()
     if( QDir(selecteddirs[0]).exists() )
       settings.setValue( "SaveFileDir", selecteddirs[0] );
 #endif
+    
+    
+#if defined(__APPLE__) && !defined(IOS)
+    const QString downloadsFolder = QStandardPaths::writableLocation( QStandardPaths::DownloadLocation );
+    if( QDir(selecteddirs[0]) == QDir(downloadsFolder) )
+      m_saveDirectory->setText( "Downloads" );
+    else
+      m_saveDirectory->setText( selecteddirs[0] );
+#else
     m_saveDirectory->setText( selecteddirs[0] );
+#endif
   }//if( selecteddirs.length() > 0 )
 }//void browseForDirectory()e
 

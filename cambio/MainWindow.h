@@ -40,7 +40,6 @@ class QToolButton;
 
 class TimeView;
 class SaveWidget;
-class QHBoxLayout;
 class SpectrumView;
 class BusyIndicator;
 class MeasurementInfo;
@@ -137,7 +136,7 @@ protected:
   QLabel *m_totalSamples;
   
   QWidget *m_detectors;
-  QHBoxLayout *m_detectorsLayout;
+  QGridLayout *m_detectorsLayout;
   std::vector<QCheckBox *> m_detCheckBox;
   
   QToolButton *m_loglin;

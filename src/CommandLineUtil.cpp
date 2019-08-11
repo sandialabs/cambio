@@ -35,7 +35,14 @@ namespace po = boost::program_options;
 #if( SpecUtils_ENABLE_D3_CHART )
 #include "SpecUtils/D3SpectrumExport.h"
 
+/** If you want to also save meta-info to JSON output (serial number, like GPS,
+    analysis results, etc), then set WRITE_JSON_META_INFO to 1.
+    Not tested, and only file-level (not record-leve) info currently written out.
+ */
+#define WRITE_JSON_META_INFO 0
+
 namespace {
+#if( !SpecUtils_D3_SUPPORT_FILE_STATIC )
   string file_to_string( const char *filename )
   {
     std::ifstream t( filename );
@@ -46,6 +53,7 @@ namespace {
     return std::string((std::istreambuf_iterator<char>(t)),
                        std::istreambuf_iterator<char>());
   }
+#endif
   
   bool html_page_header( std::ostream &ostr, const std::string &title )
   {
@@ -71,6 +79,114 @@ namespace {
     
     return ostr.good();
   }//html_page_header
+  
+#if( WRITE_JSON_META_INFO )
+  /** Output meta-information at the file level */
+  void add_file_meta_info_to_json( std::ostream &output, const MeasurementInfo &info )
+  {
+    auto jsonEscape = []( string input ) -> string {
+      UtilityFunctions::ireplace_all( input, "\"", "\\\"" );  //ToDo: Properly escape JSON strings!
+      return input;
+    };
+    
+    output << "{ IsMetaInformation: true";
+    if( !info.manufacturer().empty() )
+      output << ", Manufacturer: \"" << jsonEscape( info.manufacturer() ) << "\"";
+    if( !info.instrument_model().empty() )
+      output << ", Model: \"" << jsonEscape( info.instrument_model() ) << "\"";
+    output << ", DetectorType: \"" << jsonEscape( detectorTypeToString( info.detector_type() ) ) << "\"";
+    if( !info.instrument_type().empty() )
+      output << ", InstrumentType: \"" << jsonEscape( info.instrument_type() ) << "\"";
+    if( !info.instrument_id().empty() )
+      output << ", SerialNumber: \"" << jsonEscape( info.instrument_id() ) << "\"";
+    output << ", FileUuid: \"" << jsonEscape( info.uuid() ) << "\"";
+    
+    const vector<string> &fileRemarks = info.remarks();
+    if( fileRemarks.size() )
+    {
+      output << ", Remarks: [";
+      for( size_t remarknum = 0; remarknum < fileRemarks.size(); ++remarknum )
+        output << (remarknum ? "," : "") << "\"" << jsonEscape( fileRemarks[remarknum] ) << "\"";
+      output << "]";
+    }
+    
+    if( !info.measurment_operator().empty() )
+      output << ", Operator: \"" << jsonEscape( info.measurment_operator() ) << "\"";
+    
+    output << ", NumberMeasurements: " << info.num_measurements();
+    
+    if( info.has_gps_info() )
+    {
+      //info.position_time()
+      output << ", MeanLatitude: " << info.mean_latitude();
+      output << ", MeanLongitude: " << info.mean_longitude();
+    }
+    //info.inspection()
+    //info.measurement_location_name()
+    //info.lane_number()
+    //const std::vector<std::string> &MeasurementInfo::detector_names() const
+    output << ", TotalLiveTime: " << info.gamma_live_time();
+    output << ", TotalRealTime: " << info.gamma_real_time();
+    output << ", TotalSumGammas: " << info.gamma_count_sum();
+    //output << ", TotalSumNeutrons: " << info.neutron_counts_sum();
+    
+    std::shared_ptr<const DetectorAnalysis> ana = info.detectors_analysis();
+    if( ana )
+    {
+      output << ", Analysis: {";
+      
+      output << " AlgorithmName:'" << jsonEscape( ana->algorithm_name_ ) << "'";
+      output << " AlgorithmCreator:'" << jsonEscape( ana->algorithm_creator_ ) << "'";
+      output << " AlgorithmDescription:'" << jsonEscape( ana->algorithm_description_ ) << "'";
+      output << " AlgorithmResultDescription:'" << jsonEscape( ana->algorithm_result_description_ ) << "'";
+      if( !ana->algorithm_component_versions_.empty() )
+      {
+        output << ", ComponentVersions: [";
+        for( size_t i = 0; i < ana->algorithm_component_versions_.size(); ++i )
+          output << (i?",":"") << "{component:'" << jsonEscape( ana->algorithm_component_versions_[i].first ) << "', "
+                 << "version:'" << jsonEscape( ana->algorithm_component_versions_[i].second ) << "'}";
+        output << "]";
+      }
+      
+      if( !ana->remarks_.empty() )
+      {
+        output << ", Remarks: [";
+        for( size_t i = 0; i < ana->remarks_.size(); ++i )
+          output << (i?",":"") << "'" << jsonEscape( ana->remarks_[i] ) << "'";
+        output << "]";
+      }
+      
+      if( !ana->results_.empty() )
+      {
+        output << ", Results: [";
+        for( size_t i = 0; i < ana->results_.size(); ++i )
+        {
+          const auto &result = ana->results_[i];
+          output << (i?",":"") << "{";
+          output << "Nuclide:'" << jsonEscape( result.nuclide_ ) << "'";
+          if( !result.remark_.empty() )
+            output << ", Remark:'" << jsonEscape( result.remark_ ) << "'";
+          if( result.activity_ > 0.0f )
+            output << ", Activity:" << result.activity_ << ""; //in units of becquerel (eg: 1.0 == 1 bq)
+          //float ;
+          if( !result.nuclide_type_.empty() )
+            output << ", NuclideType:'" << jsonEscape( result.nuclide_type_ ) << "'";
+          if( !result.id_confidence_.empty() )
+            output << ", Confidence:'" << jsonEscape( result.id_confidence_ ) << "'";
+          //float distance_;            //in units of mm (eg: 1.0 == 1 mm )
+          if( result.dose_rate_ > 0.0f )
+            output << ", DoseRate:" << result.dose_rate_ << ""; //in units of micro-sievert per hour
+          //float real_time_;           //in units of seconds (eg: 1.0 = 1 s)
+          //std::string detector_;
+          output << "}";
+        }
+        output << "]";
+      }//if( !ana->results_.empty() )
+    }//if( ana )
+
+    output << "},\n\t";
+  }//void add_file_meta_info_to_json( std::ostream &ostr, const MeasurementInfo &info )
+#endif
 }
 #endif
 
@@ -103,9 +219,17 @@ int run_command_util( const int argc, char *argv[] )
 //  store(command_line_parser(args).options(desc).run(), vm);
   
   bool force_writing, summ_meas_for_single_out, include_all_cal_spec;
+  bool sum_all_spectra;
+  
+  bool no_background_spec, no_foreground_spec, no_intrinsic_spec;
+  bool no_calibration_spec, no_unknown_spec;
+  bool background_only, foreground_only, calibation_only, intrinsic_only;
+  //bool spectra_of_likely_interest_only;
+  
 #if( SpecUtils_ENABLE_D3_CHART )
   string html_to_include = "all";
 #endif
+  unsigned int rebin_factor;
   
   string outputname, outputformatstr;
   vector<string> inputfiles;
@@ -138,7 +262,8 @@ int run_command_util( const int argc, char *argv[] )
      )
   
     ("force", po::value<bool>(&force_writing)->default_value(false),
-              "Forces overwriting of output file.")
+              "Forces overwriting of output file."
+    )
     ("combine-multi", po::value<bool>(&summ_meas_for_single_out)->default_value(false),
               "For input files with multiple spectra, being saved to a output"
               " format that only allows a single spectrum, this option"
@@ -157,9 +282,10 @@ int run_command_util( const int argc, char *argv[] )
               " set this flag to true then all calibrations will be used to"
               " write the output."
     )
-    ("serial-number", po::value<string>(&newserialnum),
-     "Used to change the detector serial number written to the output file.")
-    ("model", po::value<string>(&newdettype),
+    ("set-serial-number", po::value<string>(&newserialnum),
+     "Used to change the detector serial number written to the output file."
+    )
+    ("set-model", po::value<string>(&newdettype),
      "Used as a hint to alter some information in the output file to possibly"
      " make some of the meta-information of the output match what would be"
      " seen from a file from an actual detector.\n"
@@ -171,6 +297,56 @@ int run_command_util( const int argc, char *argv[] )
      " best you should consider this some hints in the output file and not rely"
      " on results without testing the output.  If the input detector is"
      " determined to be the same as the output detector, nothing is changed."
+    )
+    //("spectra-of-likely-interest-only", po::value<bool>(&spectra_of_likely_interest_only)->default_value(false),
+    // "Filters out all spectra, except the ones you probably want to analyze."
+    // " Some formats like HPRDS N42 files come with lots of records you probably dont want to deal with."
+    //)
+    ("no-background-spec", po::value<bool>(&no_background_spec)->default_value(false),
+      "Removes all spectra explicitly marked, or inferred from file format, as backgrounds."
+    )
+    ("no-foreground-spec", po::value<bool>(&no_foreground_spec)->default_value(false),
+     "Removes all spectra explicitly marked, or inferred from file format, as foreground."
+     " Input files with a single spectrum will be assumed as foreground, unless"
+     " explicitly marked otherwise within the file."
+    )
+    ("no-intrinsic-spec", po::value<bool>(&no_intrinsic_spec)->default_value(false),
+     "Removes all spectra explicitly marked, or inferred from file format, as"
+     " the detectors intrinsic radiation spectrum set at the factory."
+    )
+    ("no-calibration-spec", po::value<bool>(&no_calibration_spec)->default_value(false),
+     "Removes all spectra explicitly marked, or inferred from file format, as"
+     " calibration spectra."
+    )
+    ("no-unknown-spec", po::value<bool>(&no_unknown_spec)->default_value(false),
+     "Removes all spectra that do not have their type explcitly marked or"
+     " designated by the file format.  For files that have a single spectrum,"
+     " unless it is explicitly marked, it will be assumed a foreground."
+    )
+    ("background-only", po::value<bool>(&background_only)->default_value(false),
+     "Only allow spectra marked as background to be written to the output."
+    )
+    ("foreground-only", po::value<bool>(&foreground_only)->default_value(false),
+     "Filter out all none-foreground spectra."
+     " Input files with a single unmarked sample will be assumed as foreground."
+    )
+    ("calibation-only", po::value<bool>(&calibation_only)->default_value(false),
+     "Filter out all spectra not marked as calibration."
+    )
+    ("intrinsic-only", po::value<bool>(&intrinsic_only)->default_value(false),
+     "Filter out all spectra not marked as instrinsic."
+    )
+    ( "sum-all-spectra", po::value<bool>(&sum_all_spectra)->default_value(false),
+       "Sum all spectra in each of the input files, which pass any optional"
+       " filters, so that the output files contains only a single spectrum, even"
+       " if the output format could support more than a single spectrum."
+    )
+     ( "rebin-factor", po::value<unsigned int>(&rebin_factor)->default_value(1),
+       "How many times to double the binning to reduce final number of bins."
+       " 1 is no change, 2 is half as many bins as original, 3 is one fourth,"
+       " 4 is one eight, and so on.  If it is asked to combine more channels than"
+       " can be (ex., for 1024 channels, a rebin factor > 10), then it will be rebined"
+       " down to a single channel."
      )
 #if( SpecUtils_ENABLE_D3_CHART )
   ("html-output", po::value<string>(&html_to_include)->default_value("all"),
@@ -211,6 +387,17 @@ int run_command_util( const int argc, char *argv[] )
 "Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA\n"
 "\n";
   
+  auto printExampleMsg = [=](){
+    cout << endl << "Example uses:\n"
+         << "\t" << argv[0] << " input.n42 output.pcf" << endl
+         << "\t" << argv[0] << " --format=CSV --no-background-spec=true ./path/to/input/*.n42 ./path/to/output" << endl
+         << "\t" << argv[0] << " --format=n42 --sum-all-spectra=1 --input input_0.pcf input_1.csv input_3.spe --output ./output/" << endl
+         << "\t" << argv[0] << " --sum-all-spectra true -o output.spc -i inputfile.n42" << endl
+#if( SpecUtils_ENABLE_D3_CHART )
+         << "\t" << argv[0] << " input.n24 output.html"
+#endif
+         << endl;
+  };
   
   po::positional_options_description p;
   p.add("input", -1);
@@ -262,6 +449,7 @@ int run_command_util( const int argc, char *argv[] )
     cerr << "Error parsing command line arguments: " << e.what() << endl;
     cout << "\n" << about_msg << endl;
     cout << cl_desc << endl;
+    printExampleMsg();
     return 1;
   }//try catch
 
@@ -275,6 +463,7 @@ int run_command_util( const int argc, char *argv[] )
   if( cl_vm.count("help") )
   {
     cout << cl_desc << endl;
+    printExampleMsg();
     return 0;
   }//if( cl_vm.count("help") )
 
@@ -318,6 +507,7 @@ int run_command_util( const int argc, char *argv[] )
     
     cout << "\n" << about_msg << endl;
     cout << cl_desc << endl;
+    printExampleMsg();
     
     return 2;
   }//if( inputfiles.empty() )
@@ -370,8 +560,7 @@ int run_command_util( const int argc, char *argv[] )
     return 4;
   }//if( outputformatstr.empty() && inputfiles.size() > 1 )
   
-  
-  
+
   if( outputformatstr.empty() && outputname.size()>3 )
   {
     const string::size_type pos = outputname.find_last_of( '.' );
@@ -475,6 +664,15 @@ int run_command_util( const int argc, char *argv[] )
   }//for( loop over input files )
   
   
+  if( background_only )
+    no_foreground_spec = no_intrinsic_spec = no_calibration_spec = no_unknown_spec = true;
+  if( foreground_only )
+    no_background_spec = no_intrinsic_spec = no_calibration_spec = no_unknown_spec = true;
+  if( calibation_only )
+    no_background_spec = no_foreground_spec = no_intrinsic_spec = no_unknown_spec = true;
+  if( intrinsic_only )
+    no_background_spec = no_foreground_spec = no_calibration_spec = no_unknown_spec = true;
+
   
   string outdir, outname;
   if( UtilityFunctions::is_directory(outputname) )
@@ -535,7 +733,6 @@ int run_command_util( const int argc, char *argv[] )
         parsed_all = false;
         continue;
       }//if( !loaded )
-    
       
       const set<string> cals = info.energy_cal_variants();
       
@@ -602,7 +799,99 @@ int run_command_util( const int argc, char *argv[] )
             cerr << (calnum++ ? ", " : "") << str;
           cerr << "} - so including all energy calibrations" << endl;
         }
-      }//
+      }//if( more than one calibration present, and we only want one )
+      
+      const set<int> prefilter_samples = info.sample_numbers();
+      
+      auto remove_type = [&info,inname,prefilter_samples]( Measurement::SourceType type ){
+        int nremoved = 0;
+        vector<shared_ptr<const Measurement>> meass = info.measurements();
+        for( shared_ptr<const Measurement> &m : meass )
+        {
+          Measurement::SourceType record_type = m->source_type();
+          
+          if( record_type == Measurement::SourceType::UnknownSourceType
+             && prefilter_samples.size()==1 )
+            record_type = Measurement::SourceType::Foreground;
+          
+          if( record_type == type )
+          {
+            ++nremoved;
+            info.remove_measurment( m, false );
+          }
+        }//for( loop over measurements )
+        
+        if( nremoved )
+        {
+          try
+          {
+            info.cleanup_after_load();
+          }catch( std::exception &e )
+          {
+            cerr << "Error removing spectra from '" << inname << "': " << e.what() << endl;
+          }//try / catch
+        }//if( nremoved )
+      };//remove_type(...)
+      
+      if( no_background_spec )
+        remove_type( Measurement::SourceType::Background );
+      
+      if( no_foreground_spec )
+        remove_type( Measurement::SourceType::Foreground );
+      
+      if( no_intrinsic_spec )
+        remove_type( Measurement::SourceType::IntrinsicActivity );
+      
+      if( no_calibration_spec )
+        remove_type( Measurement::SourceType::Calibration );
+      
+      if( no_unknown_spec )
+        remove_type( Measurement::SourceType::UnknownSourceType );
+      
+      if( sum_all_spectra )
+      {
+        const set<int> sample_num = info.sample_numbers();
+        const std::vector<int> det_nums = info.detector_numbers();
+        const vector<bool> det_to_use( det_nums.size(), true );
+        std::shared_ptr<Measurement> summed_meas = info.sum_measurements( sample_num, det_to_use);
+        vector<shared_ptr<const Measurement>> meass = info.measurements();
+        for( shared_ptr<const Measurement> &m : meass )
+          info.remove_measurment( m, false );
+        info.add_measurment( summed_meas, true );
+        try
+        {
+          info.cleanup_after_load();
+        }catch( std::exception &e )
+        {
+          cerr << "Error summing all spectra from '" << inputfiles[i] << "': "
+               << e.what() << "\n\tSkipping file." << endl;
+          continue;
+        }//try / catch
+      }//if( sum_all_spectra )
+      
+      if( rebin_factor > 1 )
+      {
+        set<size_t> nchannels;
+        for( const auto &m : info.measurements() )
+          nchannels.insert( m->num_gamma_channels() );
+        
+        for( const size_t nchann : nchannels )
+        {
+          if( nchann < 2 )
+            continue;
+          
+          const size_t ncombine = std::pow( 2, (rebin_factor-1) );
+          if( (nchann % ncombine) != 0 )
+          {
+            cerr << "Not rebinning spectra with " << nchann << " as " << nchann
+                 << "%" << ncombine << "=" << (nchann % ncombine) << endl;
+            continue;
+          }
+          
+          info.combine_gamma_channels( ncombine, nchann );
+        }//for( const size_t nchann : nchannels )
+      }//if( rebin_factor > 1 )
+      
       
       string savename = outname;
       if( savename.empty() )
@@ -640,38 +929,9 @@ int run_command_util( const int argc, char *argv[] )
         continue;
       }
     
-      /*
-       kGR135Detector,
-       kIdentiFinderDetector,       //First gen identiFINDER with smaller crystal
-       //than NGs; note sometimes called identiFINDER-N.
-       // I dont have any examples of this
-       kIdentiFinderNGDetector,     //Used for both the NG and NGH since same crystal
-       //  size (NGH has neutron tube)
-       kIdentiFinderLaBr3Detector,  // Probably not detected (ever?)
-       
-       //The kDetectiveDetector is a default for when the type of detective cant be
-       //  determined, not an actual detector type.  This enum doesnt consider the
-       //  difference between the EX and DX series; the DX are same gamma crystal,
-       //  but do not have a neutron detector.
-       kDetectiveDetector,
-       kDetectiveExDetector,
-       kDetectiveEx100Detector,
-       kOrtecIDMPortalDetector,     //only identified from N42 files
-       kSAIC8Detector,              //only identified from N42 files
-       kFalcon5000,
-       kUnknownDetector,
-       kMicroDetectiveDetector,
-       kMicroRaiderDetector,
-       kRadHunterNaI,
-       kRadHunterLaBr3,
-       kRsi701,
-       kRsi705,
-       kAvidRsi, //unspecified RSI/Avid system, usually model is stated as RS???
-       kSam940LaBr3,  //The LaBr3 may not always be detector, and then it will be assigned kSame940
-       kSam940,
-       kSam945
-       */
       vector< std::shared_ptr<const Measurement> > meass = info.measurements();
+      
+      
       
       bool containted_netruon = false;
       for( size_t i = 0; i < meass.size(); ++i )
@@ -786,12 +1046,19 @@ int run_command_util( const int argc, char *argv[] )
       }//switch( metatype )
       
       
-      
-      if( cl_vm.count("serial-number") )
+      if( cl_vm.count("set-serial-number") )
         info.set_instrument_id( newserialnum );
     
       bool opened_all_output_files = true, encoded_all_files = true;
     
+      if( info.measurements().empty() )
+      {
+        //encoded_all_files = false;
+        cerr << "After filtering, '" << inname << "' had no spectra left to write - skipping." << endl;
+        continue;
+      }//if( we filteres out all the measuremnts )
+      
+      
       if( format == kChnSpectrumFile
           || format == kBinaryIntSpcSpectrumFile
           || format == kBinaryFloatSpcSpectrumFile
@@ -844,7 +1111,7 @@ int run_command_util( const int argc, char *argv[] )
           if( !wrote )
           {
             encoded_all_files = false;
-            cerr << "Possibly failed writing '" << saveto << "'" << endl;
+            cerr << "Possibly failed in writing '" << saveto << "'" << endl;
           }else
           {
             cout << "Saved '" << saveto << "'" << endl;
@@ -888,7 +1155,6 @@ int run_command_util( const int argc, char *argv[] )
               if( extention.size() > 0 )
                 outname = outname + extention;
             
-            
               if( !force_writing && UtilityFunctions::is_file(outname) )
               {
                 cerr << "Output file '" << outname << "' existed, and --force not"
@@ -925,7 +1191,7 @@ int run_command_util( const int argc, char *argv[] )
                 if( !wrote )
                 {
                   encoded_all_files = false;
-                  cerr << "Possibly failed writing '" + outname + "'" << endl;
+                  cerr << "Possibly failed writing of '" + outname + "'" << endl;
                 }else
                 {
                   cout << "Saved '" << outname << "'" << endl;
@@ -945,7 +1211,6 @@ int run_command_util( const int argc, char *argv[] )
           file_existed = true;
           continue;
         }//if( !force_writing && UtilityFunctions::is_file(savename) )
-      
       
         ofstream output( saveto.c_str(), ios::binary | ios::out );
       
@@ -997,15 +1262,30 @@ int run_command_util( const int argc, char *argv[] )
             if( UtilityFunctions::iequals( html_to_include, "json" ) )
             {
               output << "[\n\t";
+              
+#if( WRITE_JSON_META_INFO )
+              add_file_meta_info_to_json( output, info );
+#endif
+              
               for( size_t i = 0; i < measurements.size(); ++i )
               {
+                const auto &meas = *measurements[i];
+                
+#if( WRITE_JSON_META_INFO )
+                //output meta-information on the spectrum level (there may be multiple spectra in a single file)
+                //  not implemented at all yet; should probably be done inside D3SpectrumExport::write_spectrum_data_js(...)
+                //meas.has_gps_info() { meas.position_time(), meas.latitude(), meas.longitude()}
+                //meas.contained_neutron()
+                //meas.remarks()
+                //meas.source_type()
+#endif
                 if( i != 0 )
                   output << ",\n\t";
               
                 D3SpectrumExport::D3SpectrumOptions options;
                 options.line_color = "black";
                 options.display_scale_factor = 1.0;
-                wrote = D3SpectrumExport::write_spectrum_data_js( output, *measurements[i], options, 0, -1 );
+                wrote = D3SpectrumExport::write_spectrum_data_js( output, meas, options, 0, -1 );
               }//for( loop over measurements )
               
               output << "\n]" << endl;
@@ -1152,7 +1432,7 @@ int run_command_util( const int argc, char *argv[] )
         if( !wrote )
         {
           encoded_all_files = false;
-          cerr << "Possibly failed writing '" << saveto << "'" << endl;
+          cerr << "Possibly failed write of '" << saveto << "'" << endl;
         }else
         {
           cout << "Saved '" << saveto << "'" << endl;
@@ -1178,10 +1458,6 @@ int run_command_util( const int argc, char *argv[] )
   
   return 0;
 }//int run_command_util( int argc, char *argv[] )
-
-
-
-
 
 
 
