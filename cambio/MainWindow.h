@@ -137,6 +137,7 @@ protected:
   
   QWidget *m_detectors;
   QGridLayout *m_detectorsLayout;
+
   std::vector<QCheckBox *> m_detCheckBox;
   
   QToolButton *m_loglin;
