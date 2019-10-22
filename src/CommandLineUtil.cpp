@@ -505,7 +505,8 @@ int run_command_util( const int argc, char *argv[] )
 #endif
   unsigned int rebin_factor;
   
-  string outputname, outputformatstr;
+  bool recursive = false;
+  string inputdir, outputname, outputformatstr;
   vector<string> inputfiles;
   
   string newserialnum, newdettype;
@@ -543,6 +544,19 @@ int run_command_util( const int argc, char *argv[] )
      " specified. Options specified on the command line are combined with"
      " options given in the INI file.  Most options can only be specified once."
     )
+    ("inputdir", po::value<string>(&inputdir),
+     "Input directory.  All files in specified directory will (try to) be"
+     " converted.  Must also specify 'output' option to point to an existing"
+     " directory.  May not be used with 'input' option."
+     "  By default not recursive."
+    )
+    ("recursive", po::value<bool>(&recursive)->default_value(false),
+     "[Experimental - use at own risk] "
+     "When 'inputdir' is used, specifying this to be true will result in files"
+     " being converted in not just the directory specified, but all of its"
+     " descendant directories.  The output directory structure will mirror"
+     " that of the input directory.\n"
+     " Only has effect when 'inputdir' option is used.")
     ("combine-multi", po::value<bool>(&summ_meas_for_single_out)->default_value(false),
               "For input files with multiple spectra, being saved to a output"
               " format that only allows a single spectrum, this option"
@@ -831,6 +845,44 @@ int run_command_util( const int argc, char *argv[] )
   //spec_exts: extensions of files that we can read.
   const string spec_exts[] = { "txt", "csv", "pcf", "xml", "n42", "chn", "spc", "dat", "cnf", "spe", "js", "json", "html", "css" };
   const size_t len_spec_exts = sizeof(spec_exts)/sizeof(spec_exts[0]);
+  
+  
+  if( !inputdir.empty() )
+  {
+    if( !inputfiles.empty() )
+    {
+      cerr << "You can not specify an input directory and seperate input files."
+           << endl;
+      return 13;
+    }
+    
+    if( outputname.empty() )
+    {
+      cerr << "If you specify an input directory (e.g., '--inputdir'), you must"
+      << " specify an output directory (e.g., '--output', or '-o')'" << endl;
+      return 14;
+    }
+    
+    if( !UtilityFunctions::is_directory(inputdir) )
+    {
+      cerr << "Input directory '" << inputdir << "' is not a valid directory"
+           << endl;
+      return 15;
+    }
+    
+    if( !UtilityFunctions::is_directory(outputname) )
+    {
+      cerr << "Output directory '" << outputname << "' is not a valid directory"
+           << endl;
+      return 16;
+    }
+    
+    if( recursive )
+      inputfiles = UtilityFunctions::recursive_ls(inputdir);
+    else
+      inputfiles = UtilityFunctions::ls_files_in_directory(inputdir);
+  }//if( !inputdir.empty()  )
+  
 
   
   if( inputfiles.empty() || inputfiles[0].empty() )
@@ -1261,6 +1313,7 @@ int run_command_util( const int argc, char *argv[] )
         normalize_det_name_to_n42( info, renamed_dets );
       
       string savename = outname;
+      
       if( savename.empty() )
       {
         savename = UtilityFunctions::filename(inname);
@@ -1285,9 +1338,54 @@ int run_command_util( const int argc, char *argv[] )
       }else
         savename += "." + ending;
     
-      const string saveto = UtilityFunctions::append_path( outdir, savename );
+      string saveto = UtilityFunctions::append_path( outdir, savename );
     
-    
+      if( !inputdir.empty() && recursive )
+      {
+        assert( outputname == outdir );
+        //Need to get relative path difference between inputdir and inputfiles[i]
+        //and then make that hierarchy of directories, if it doesnt already exist.
+        //UtilityFunctions::create_directory(const std::string &name)
+        
+        const string reldir = UtilityFunctions::fs_relative( inputdir, UtilityFunctions::parent_path(inputfiles[i]) );
+        
+        //ToDo: implement something like UtilityFunctions:recursive_create_directory(...)
+        //      rather than this huge hack to recursively make directories.
+        
+        string tmpdirstr = reldir;
+        std::deque<string> dirstomake;
+        while( !tmpdirstr.empty() && tmpdirstr!= "." )
+        {
+          string fullpath = UtilityFunctions::append_path( outdir, tmpdirstr );
+          string parent = UtilityFunctions::parent_path( fullpath );
+          string leaf = UtilityFunctions::fs_relative( parent, fullpath );
+          dirstomake.push_front( leaf );
+          tmpdirstr = UtilityFunctions::fs_relative( outdir, parent );
+        }
+        
+        tmpdirstr = outdir;
+        for( const auto leaf : dirstomake )
+        {
+          tmpdirstr = UtilityFunctions::append_path( tmpdirstr, leaf );
+          if( !UtilityFunctions::is_directory(tmpdirstr) )
+          {
+            //cout << "Will make directory '" << tmpdirstr << "'" << endl;
+            UtilityFunctions::create_directory(tmpdirstr);
+          }else
+          {
+            //cout << "Dont need to make directory '" << tmpdirstr << "'" << endl;
+          }
+        }//for( const auto leaf : dirstomake )
+        
+        const string fulloutdir = UtilityFunctions::append_path( outdir, reldir );
+        saveto = UtilityFunctions::append_path( fulloutdir, savename );
+        
+        //cout << "Continuing rather than writing" << endl;
+        //continue; //debug
+      }//if( !inputdir.empty() && recursive )
+      
+      
+      
       if( saveto == inname )
       {
         cerr << "Output file '" << saveto << "' identical to input file name,"
