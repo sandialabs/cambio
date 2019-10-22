@@ -17,12 +17,14 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-
+#include <set>
+#include <cctype>
 #include <string>
 #include <fstream>
 #include <iostream>
 
 #include <boost/program_options.hpp>
+//#include <boost/algorithm/string/compare.hpp>
 
 #include "SpecUtils_config.h"
 #include "cambio/CommandLineUtil.h"
@@ -31,6 +33,8 @@
 
 using namespace std;
 namespace po = boost::program_options;
+using UtilityFunctions::convert_from_utf8_to_utf16;
+
 
 #if( SpecUtils_ENABLE_D3_CHART )
 #include "SpecUtils/D3SpectrumExport.h"
@@ -45,7 +49,11 @@ namespace {
 #if( !SpecUtils_D3_SUPPORT_FILE_STATIC )
   string file_to_string( const char *filename )
   {
-    std::ifstream t( filename );
+#ifdef _WIN32
+    ofstream file( convert_from_utf8_to_utf16(filename).c_str(), ios::in | ios::binary );
+#else
+    ofstream file( filename.c_str(), ios::in | ios::binary );
+#endif
     
     if( !t.is_open() )
       throw runtime_error( "file_to_string: Failed to open '" + string(filename) + "'" );
@@ -190,6 +198,271 @@ namespace {
 }
 #endif
 
+namespace
+{
+  
+  /** Checks if the starting 3 or 4 letters are consistent with N42 naming scheme
+     Doesnt check letters after this incase we have already prepended the name
+     with the N42 check, or energy cal info got appended to name.
+     Note: This function is case independant (e.g, "ba3" is acceptable).
+   */
+  bool is_n42_name( const std::string &name )
+  {
+    if( name.size() < 3 )
+      return false;
+  
+    const bool first_okay = ((name[0] >= 'A' && name[0] <= 'D') || (name[0] >= 'a' && name[0] <= 'd'));
+    const bool second_okay = ((name[1] >= 'A' && name[1] <= 'H') || (name[1] >= 'a' && name[1] <= 'h'));
+    const bool third_okay = (name[2] >= '1' && name[2] <= '8');
+    const bool fourth_okay = ((name.size() < 4) || name[3] == 'n' || name[3] == 'N' || name[3] == ' ' || name[3] == '_' );
+    
+    return first_okay && second_okay && third_okay && fourth_okay;
+  }//bool is_n42_name( const std::string &name )
+  
+  /*
+   //std::set<string,ilessthan()> doesnt seem to work
+  struct ilessthan
+  {
+    ilessthan(){};
+    
+    bool operator()( const string &lhs, const string &rhs ) const {
+      string lhs_copy = lhs, rhs_copy = rhs;
+      std::transform( begin(lhs), end(lhs), begin(lhs),
+                     [](unsigned char c){ return std::tolower(c); });
+      std::transform( begin(rhs), end(rhs), begin(rhs),
+                     [](unsigned char c){ return std::tolower(c); });
+      return lhs < rhs;
+    };
+  };
+   */
+  
+  /** If necassary, renames detectors so the start of detector names are
+   consistent with N42 naming convention - primarily useful for appllications
+   that rely on detector names.
+   
+   @param info The measurement to try normalizing the names of
+   @param dont_change_det_names Detectors names to not change, regardless of if
+          they are N42 compliant.  Note: case sensitive.
+   
+   Note: If changes are needed, the detector name is prepended with a N42 name,
+         followed by a space, then the original detector name.
+   
+   Note: This function is really a hack at the moment; there is room for much
+         improvement.
+   */
+  void normalize_det_name_to_n42( MeasurementInfo &info, const vector<string> &dont_change_det_names )
+  {
+    const bool print_debug = false;
+    
+    //We will only change spectroscopic gamma detector names, and their
+    //  respective neutron names (e.g., if 'A1' and 'A1N' exist, we will change
+    //  both)
+    set<string> names_to_change_set, nonN42_names_not_changed, final_n42_names;
+    
+    //ToDo: this next loop could be really slow on large files - should fix.
+    for( const auto &m : info.measurements() )
+    {
+      if( !m )
+        continue;
+      const auto &name = m->detector_name();
+      
+      if( std::count(begin(dont_change_det_names), end(dont_change_det_names), name) )
+      {
+        if( is_n42_name(name) )
+          final_n42_names.insert( name );
+        else
+          nonN42_names_not_changed.insert( name );
+      }else if( m->gamma_counts() && m->gamma_counts()->size()>6 )
+      {
+        //(is_n42_name(name) ? final_n42_names : names_to_change_set).insert(name);
+        if( is_n42_name(name) )
+          final_n42_names.insert( name );
+        else
+          names_to_change_set.insert( name );
+      }else
+      {
+        nonN42_names_not_changed.insert( name );
+      }
+    }//for( loop over measurements )
+    
+    //Some samples for a valid spectrascopic gamma detector may not have gamma
+    //  data, so make sure those detectors wont be in nonN42_names_not_changed
+    for( const auto &name : final_n42_names )
+      nonN42_names_not_changed.erase(name);
+    for( const auto &name : names_to_change_set )
+      nonN42_names_not_changed.erase(name);
+    
+    if( names_to_change_set.empty() )
+      return;
+    
+    const set<string> unchanged_n42 = final_n42_names; //for debug only
+    vector<string> names_to_change( begin(names_to_change_set), end(names_to_change_set) );
+    
+    //boost::algorithm::is_iless gives a compile error, so for now I'll just do
+    //  the stupid thing.
+    //std::sort( begin(names_to_change), end(names_to_change), boost::algorithm::is_iless() );
+    std::sort( begin(names_to_change), end(names_to_change), [](string lhs, string rhs) -> bool {
+      std::transform( begin(lhs), end(lhs), begin(lhs),
+                     [](unsigned char c){ return std::tolower(c); });
+      std::transform( begin(rhs), end(rhs), begin(rhs),
+                     [](unsigned char c){ return std::tolower(c); });
+      return lhs < rhs;
+    } );
+    
+    //Basing the N42 naming order off of what is used to create PCF files, eg:
+    //loop over columns (2 uncompressed, or 4 compressed)  //col 1 is Aa1, col two is Ba1
+    //  loop over panels (8) //Aa1, Ab1, Ac1
+    //    loop over MCAs (8) //Aa1, Aa2, Aa3, etc
+    
+    //ToDo: This naming heuristic of when to increment column vs panel vs MCA
+    //      should probably be improved on by looking at all the available
+    //      example portals and making this consistent
+    
+    //Usually RPMs only have 2 columns (e.g., no Ca1, etc), so only use names
+    //  begining with C/D if there are a lot of detectors.
+    const size_t num_col = (names_to_change.size() > 16) ? 4 : 2;
+    
+    //
+    const size_t num_panel = (names_to_change.size() > 8) ? 8 : 4;
+    
+    //Preffer to assign new pannels, instead of new MCAs within panels.
+    const size_t num_mca = (names_to_change.size() > 32) ? 8 : 1;
+    
+    //Loop over non-n42-compliant original names, and assign them the first
+    //  available N42 name.
+    for( const auto &name : names_to_change )
+    {
+      //To find the first available N42 name, we will just sequentually loop
+      //  over all possbile N42 names, until we find one that hasnt been used.
+      //  (doing things the incredibly stupid way)
+      string newprefix;
+      
+      auto n42_name_taken = [&](const std::string &n ) -> bool {
+        for( const auto &finalname : final_n42_names )
+        {
+          assert( finalname.size() >= 3 );
+          if( UtilityFunctions::iequals(finalname.substr(0,3), n) )
+            return true;
+        }//for
+        return false;
+      };//n42_name_taken lambda
+      
+      //A few RPMs name their detectors as "A1", "A2", "B1", "B2", which are
+      //  actually valid according to N42-2006, but it seems the convention has
+      //  moved so that programs expect "Aa1", "Aa2", "Ba1", "Ba2"
+      if( name.size() == 2
+          && ((name[0]>='A' && name[0]<='H') || (name[0]>='a' && name[0]<='h'))
+          && name[1]>='1' && name[1]<='8' )
+      {
+        string moddedname = name.substr(0,1) + "a" + name.substr(1,1);
+        moddedname[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(moddedname[0])));
+        
+        if( !n42_name_taken( moddedname) )
+          newprefix = moddedname;
+      }//if( name like "A1" || "A2" || ... )
+      
+      
+      //For detectors with names like "DetectorInfoPan1DetG2"
+      //  If only could use regex...
+      if( newprefix.empty() && name.size()==21
+          && UtilityFunctions::istarts_with(name, "DetectorInfoPan")
+          && UtilityFunctions::iequals(name.substr(16).substr(0,4), "DetG")
+          && isdigit(name[15]) && isdigit(name[20]) )
+      {
+        string candidate;
+        candidate += ('A' + (name[15]-'1'));
+        candidate += 'a';
+        candidate += name[20];
+        
+        if( !n42_name_taken(candidate) )
+          newprefix = candidate;
+      }//if( detectors name like "DetectorInfoPan1DetG2" )
+      
+      
+      for( size_t mca = 0; newprefix.empty() && mca < num_mca; ++mca )
+      {
+        for( size_t pannel = 0; newprefix.empty() && pannel < num_panel; ++pannel )
+        {
+          for( size_t col = 0; newprefix.empty() && col < num_col; ++col )
+          {
+            string candidate;
+            candidate += 'A' + col;
+            candidate += 'a' + pannel;
+            candidate += '1' + mca;
+            
+            if( !n42_name_taken(candidate) )
+              newprefix = candidate;
+          }//for( loop over col )
+        }//for( loop over pannel )
+      }//for( loop over MCAs )
+      
+      
+      if( newprefix.empty() )  //probably shouldnt happen, but JIC
+      {
+        std::cerr << "normalize_det_name_to_n42: Somehow failed to find appropriate"
+        << " N42 name for detector '" << name << "' - wcjohns should fix this!" << std::endl;
+        assert( !newprefix.empty() );
+        continue;
+      }
+    
+      const string newname = newprefix + (name.empty() ? string("") : (" " + name));
+      
+      if( print_debug )
+        printf( "Changing detname='%s' to '%s'\n", name.c_str(), newname.c_str() );
+      
+      try
+      {
+        info.change_detector_name( name, newname );
+      }catch( std::exception &e )
+      {
+        cerr << "Warning: Unexpected error changing detector name from "
+             << "'" << name << "' to '" << newname << "'"
+             << " - results may be suspect (" << e.what() << ")" << endl;
+      }//try / catch
+      
+      final_n42_names.insert( newname );
+      
+      if( nonN42_names_not_changed.count(name+"N") || nonN42_names_not_changed.count(name+"n") )
+      {
+        const char n = nonN42_names_not_changed.count(name+"N") ? 'N' : 'n';
+        const string newneutname = newprefix + "N " + name;
+        
+        try
+        {
+          info.change_detector_name( name+n, newneutname );
+        }catch( std::exception &e )
+        {
+          cerr << "Warning: Unexpected error changing neutron detector name from"
+               << " '" << name << "' to '" << newname << "'"
+               << " - results may be suspec (" << e.what() << ")" << endl;
+        }//
+        
+        nonN42_names_not_changed.erase( name+n );
+        //printf( "Changing Neutron detname='%s' to '%s'\n", (name+n).c_str(), newneutname.c_str() );
+      }
+    }//for( const auto &name : orignames )
+    
+    if( print_debug )
+    {
+      if( !nonN42_names_not_changed.empty() )
+      {
+        string notchanged;
+        for( const auto &i : nonN42_names_not_changed )
+          notchanged += "'" + i + "', ";
+        printf( "Didnt change det names: %s\n", notchanged.c_str() );
+      }
+      
+      if( !unchanged_n42.empty() )
+      {
+        string notchanged;
+        for( const auto &i : unchanged_n42 )
+          notchanged += "'" + i + "', ";
+        printf( "Didnt need to change det names: %s\n", notchanged.c_str() );
+      }
+    }//if( print_debug )
+  }//void normalize_det_name_to_n42( MeasurementInfo &info )
+}//namespace
+
 namespace CommandLineUtil
 {
   //We will allow users to specify a detector model, to help make it look like
@@ -219,12 +492,13 @@ int run_command_util( const int argc, char *argv[] )
 //  store(command_line_parser(args).options(desc).run(), vm);
   
   bool force_writing, summ_meas_for_single_out, include_all_cal_spec;
-  bool sum_all_spectra;
+  bool sum_all_spectra, normalize_det_names;
   
   bool no_background_spec, no_foreground_spec, no_intrinsic_spec;
   bool no_calibration_spec, no_unknown_spec;
   bool background_only, foreground_only, calibation_only, intrinsic_only;
   //bool spectra_of_likely_interest_only;
+  vector<string> detector_renaimings;
   
 #if( SpecUtils_ENABLE_D3_CHART )
   string html_to_include = "all";
@@ -263,6 +537,11 @@ int run_command_util( const int argc, char *argv[] )
   
     ("force", po::value<bool>(&force_writing)->default_value(false),
               "Forces overwriting of output file."
+    )
+    ("ini", po::value<string>(),
+     "Fielsystem path of INI file were some or all command line options are"
+     " specified. Options specified on the command line are combined with"
+     " options given in the INI file.  Most options can only be specified once."
     )
     ("combine-multi", po::value<bool>(&summ_meas_for_single_out)->default_value(false),
               "For input files with multiple spectra, being saved to a output"
@@ -341,15 +620,34 @@ int run_command_util( const int argc, char *argv[] )
        " filters, so that the output files contains only a single spectrum, even"
        " if the output format could support more than a single spectrum."
     )
-     ( "rebin-factor", po::value<unsigned int>(&rebin_factor)->default_value(1),
-       "How many times to double the binning to reduce final number of bins."
-       " 1 is no change, 2 is half as many bins as original, 3 is one fourth,"
-       " 4 is one eight, and so on.  If it is asked to combine more channels than"
-       " can be (ex., for 1024 channels, a rebin factor > 10), then it will be rebined"
-       " down to a single channel."
-     )
+    ( "rebin-factor", po::value<unsigned int>(&rebin_factor)->default_value(1),
+      "How many times to double the binning to reduce final number of bins."
+      " 1 is no change, 2 is half as many bins as original, 3 is one fourth,"
+      " 4 is one eight, and so on.  If it is asked to combine more channels than"
+      " can be (ex., for 1024 channels, a rebin factor > 10), then it will be rebined"
+      " down to a single channel."
+    )
+    ("rename-det", po::value<vector<string>>(&detector_renaimings)->composing(), //multitoken(),
+     "Rename detector.  You can specify this option multiple times, once for"
+     " each detector to rename.  The argument to this option must be formated"
+     " like \"OriginalName=NewName\", where names are case sensitive.\n\t"
+     "Ex., ./cambio --rename-det=VD1=Aa1 input.n42 output.pcf\n\t"
+     "     ./cambio --rename-det 'Gamma 1 = Aa1' input.n42 output.pcf\n\t"
+     "     (leading and trailing spaces to names are ignored when quotes used)"
+    )
+    ("normalize-det-names", po::value<bool>(&normalize_det_names)->default_value(false),
+     "Setting this option to true will rename detectors, if needed, to be more"
+     " consistent with N42 standard by prepending detector names with prefixes"
+     " such as \"Aa1\", \"Bc2\", etc.\n"
+     "Currently this is done by niavely ordering alphabetically ordering the"
+     " original detector names and prepending with N42 names.\n\t"
+     "E.x., original detector names of \"VD1\", \"VD2\", \"VD3\" will become\n\t"
+     "   \"Aa1 VD1\", \"Ba1 VD2\", \"Ca1 VD3\".\n"
+     "If detectors are already named according to N42, or renamed with the"
+     " 'rename-det' option, no changes will be made."
+    )
 #if( SpecUtils_ENABLE_D3_CHART )
-  ("html-output", po::value<string>(&html_to_include)->default_value("all"),
+    ("html-output", po::value<string>(&html_to_include)->default_value("all"),
      "Only applies when saving to the HTML format.  The components to include"
      " in the output file.  Options are \n\t"
        "'all': includes everything making a self contained html file \n\t"
@@ -357,7 +655,8 @@ int run_command_util( const int argc, char *argv[] )
        "'css': the default styling of the charts\n\t"
        "'js': the SpectrumChartD3 library\n\t"
        "'d3': the D3 javascript library\n\t"
-       "'controls': the html and js for display options")
+       "'controls': the html and js for display options"
+    )
 #endif
   ;
   
@@ -426,6 +725,10 @@ int run_command_util( const int argc, char *argv[] )
     {
       if( opt.unregistered )
       {
+        //Skip warning on the '--convert' flag for using the GUI EXE from command line.
+        if( UtilityFunctions::iequals( opt.string_key, "convert") && opt.value.empty() )
+          continue;
+        
         cerr << "Warning, command line argument '" << opt.string_key
              << "' with ";
         
@@ -441,9 +744,37 @@ int run_command_util( const int argc, char *argv[] )
       }
     }//for( const auto &opt : parsed_opts.options )
     
-    
     po::store( parsed_opts, cl_vm );
     po::notify( cl_vm );
+    
+    if( cl_vm.count("ini") )
+    {
+      const string ini_file = cl_vm["ini"].as<std::string>();
+      try
+      {
+#ifdef _WIN32
+        ifstream input( convert_from_utf8_to_utf16(ini_file).c_str(), ios_base::binary|ios_base::in );
+#else
+        ifstream input( ini_file.c_str(), ios_base::binary|ios_base::in );
+#endif
+        if( !input )
+          throw runtime_error( "Could not open file." );
+        
+        //Even though we are reading from the file after the command line, it
+        //  seems the command line arguments take precedent.
+        //I dont understand why, and that makes me feel uneasy, so should figure
+        //  out why at some point.
+        
+        const bool allow_unregistered = false;
+        po::store( po::parse_config_file(input, cl_desc, allow_unregistered), cl_vm );
+        po::notify( cl_vm );
+      }catch( std::exception &e )
+      {
+        cerr << "Error parsing INI configuration file '" << ini_file << "': \n\t" << e.what() << endl;
+        return 10;
+      }
+    }//if( !ini_file.empty() )
+  
   }catch( std::exception &e )
   {
     cerr << "Error parsing command line arguments: " << e.what() << endl;
@@ -452,7 +783,7 @@ int run_command_util( const int argc, char *argv[] )
     printExampleMsg();
     return 1;
   }//try catch
-
+  
   
   if( cl_vm.count("about") )
   {
@@ -467,6 +798,7 @@ int run_command_util( const int argc, char *argv[] )
     return 0;
   }//if( cl_vm.count("help") )
 
+  
   
   //Map save to extension to save to types
   map<string,SaveSpectrumAsType> str_to_save_type;
@@ -708,6 +1040,26 @@ int run_command_util( const int argc, char *argv[] )
   }//if( format == kD3HtmlSpectrumFile )
 #endif
   
+  vector<string> renamed_dets;
+  map<string,string> det_renames;
+  for( const string &detrename : detector_renaimings )
+  {
+    const auto equal_pos = detrename.find( "=" );
+    if( equal_pos == string::npos )
+    {
+      cerr << "'rename-det' argument must be of the form \"OldName=NewName\""
+           << " with the '=' characters required"
+           << " (for arg '" << detrename << "')." << endl;
+      return 9;
+    }//
+    const string from_name = UtilityFunctions::trim_copy( detrename.substr(0,equal_pos) );
+    const string to_name = UtilityFunctions::trim_copy( detrename.substr(equal_pos+1) );
+    det_renames[from_name] = to_name;
+    renamed_dets.push_back( to_name );
+  }//for( string detrename : detector_renaimings )
+  
+  
+  
   bool parsed_all = true, input_didnt_exist = false,
        file_existed = false, wrote_all = true;
   
@@ -892,6 +1244,21 @@ int run_command_util( const int argc, char *argv[] )
         }//for( const size_t nchann : nchannels )
       }//if( rebin_factor > 1 )
       
+      for( const auto from_to : det_renames )
+      {
+        //printf( "By explicit request changing detname='%s' to '%s'\n", from_to.first.c_str(), from_to.second.c_str() );
+        try
+        {
+          info.change_detector_name( from_to.first, from_to.second );
+        }catch( std::exception & )
+        {
+          cerr << "Warning: no detector named '" << from_to.first
+               << "' to rename to '" << from_to.second << "'" << endl;
+        }
+      }//for( const auto from_to : det_renames )
+      
+      if( normalize_det_names )
+        normalize_det_name_to_n42( info, renamed_dets );
       
       string savename = outname;
       if( savename.empty() )
@@ -1079,9 +1446,12 @@ int run_command_util( const int argc, char *argv[] )
             file_existed = true;
             continue;
           }//if( !force_writing && UtilityFunctions::is_file(savename) )
-    
-        
-          ofstream output( saveto.c_str(), ios::binary | ios::out );
+          
+#ifdef _WIN32
+          ofstream output( convert_from_utf8_to_utf16(saveto).c_str(), ios_base::binary | ios_base::out );
+#else
+          ofstream output( saveto.c_str(), ios_base::binary | ios_base::out );
+#endif
         
           if( !output.is_open() )
           {
@@ -1163,8 +1533,11 @@ int run_command_util( const int argc, char *argv[] )
                 continue;
               }//if( !force_writing && UtilityFunctions::is_file(savename) )
 
-            
-              ofstream output( outname.c_str(), ios::binary | ios::out );
+#ifdef _WIN32
+              ofstream output( convert_from_utf8_to_utf16(outname).c_str(), ios_base::binary | ios_base::out );
+#else
+              ofstream output( outname.c_str(), ios_base::binary | ios_base::out );
+#endif
             
               if( !output.is_open() )
               {
@@ -1212,7 +1585,11 @@ int run_command_util( const int argc, char *argv[] )
           continue;
         }//if( !force_writing && UtilityFunctions::is_file(savename) )
       
-        ofstream output( saveto.c_str(), ios::binary | ios::out );
+#ifdef _WIN32
+        ofstream output( convert_from_utf8_to_utf16(saveto).c_str(), ios_base::binary | ios_base::out );
+#else
+        ofstream output( saveto.c_str(), ios_base::binary | ios_base::out );
+#endif
       
         if( !output.is_open() )
         {
@@ -1295,7 +1672,11 @@ int run_command_util( const int argc, char *argv[] )
               output << D3SpectrumExport::spectrum_char_d3_css() << endl;
 #else
               const char *incssname = D3SpectrumExport::spectrum_char_d3_css_filename();
-              ifstream incss( incssname, ios::in | ios::binary );
+#ifdef _WIN32
+              ofstream incss( convert_from_utf8_to_utf16(incssname).c_str(), ios::in | ios::binary );
+#else
+              ofstream incss( incssname.c_str(), ios::in | ios::binary );
+#endif
               if( !incss.is_open() )
               {
                 cerr << "Could not open the input CSS file '" << incssname << "'" << endl;
@@ -1311,7 +1692,11 @@ int run_command_util( const int argc, char *argv[] )
               output << D3SpectrumExport::spectrum_chart_d3_js() << endl;
 #else
               const char *incssname = D3SpectrumExport::spectrum_chart_d3_js_filename();
-              ifstream incss( incssname, ios::in | ios::binary );
+#ifdef _WIN32
+              ofstream incss( convert_from_utf8_to_utf16(incssname).c_str(), ios::in | ios::binary );
+#else
+              ofstream incss( incssname.c_str(), ios::in | ios::binary );
+#endif
               if( !incss.is_open() )
               {
                 cerr << "Could not open the input SpectrumChartD3 file '" << incssname << "'" << endl;
@@ -1327,7 +1712,11 @@ int run_command_util( const int argc, char *argv[] )
               output << D3SpectrumExport::d3_js() << endl;
 #else
               const char *incssname = D3SpectrumExport::d3_js_filename();
-              ifstream incss( incssname, ios::in | ios::binary );
+#ifdef _WIN32
+              ofstream incss( convert_from_utf8_to_utf16(incssname).c_str(), ios::in | ios::binary );
+#else
+              ofstream incss( incssname.c_str(), ios::in | ios::binary );
+#endif
               if( !incss.is_open() )
               {
                 cerr << "Could not open the input D3.js file '" << incssname << "'" << endl;

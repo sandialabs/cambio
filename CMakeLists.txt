@@ -150,6 +150,9 @@ add_executable( ${PROJECT_NAME} ${GUI_TYPE} main.cpp ${sources} ${headers} )
 
 if( NOT BUILD_CAMBIO_GUI )
   if( ${CMAKE_SYSTEM_NAME} STREQUAL "Linux" )
+    #Right now we are copying all of libpthread into our executable to force copying weak symbols in.
+    #  Instead, to save size should specify the functions we actually need using '-u pthread_create', etc.
+    #  Could maybe add a "-no_weak_exports" flag to the linker as well to make sure none missing.
     set( CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} "-static -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive")
     target_link_libraries( ${PROJECT_NAME} PRIVATE -static-libgcc -static-libstdc++ )
   endif( ${CMAKE_SYSTEM_NAME} STREQUAL "Linux" )
