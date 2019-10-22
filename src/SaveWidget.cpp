@@ -486,9 +486,14 @@ bool writeIndividualSpectraToOutputFile( const SaveSpectrumAsType format,
     }
   }//if( we dont want everything in the input )
   
+  const string utf8_outname = outputfile.filePath().toUtf8().data();
   
-  std::ofstream output( outputfile.filePath().toUtf8().data(),
-                       std::ios::binary | std::ios::out );
+#ifdef _WIN32
+  const std::wstring win_outname = UtilityFunctions::convert_from_utf8_to_utf16(utf8_outname);
+  std::ofstream output( win_outname.c_str(), std::ios::binary | std::ios::out );
+#else
+  std::ofstream output( utf8_outname, std::ios::binary | std::ios::out );
+#endif
   
   if( !output.is_open() )
   {

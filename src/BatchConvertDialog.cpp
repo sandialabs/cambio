@@ -51,6 +51,9 @@
 #include "SpecUtils/D3SpectrumExport.h"
 #include "SpecUtils/SpectrumDataStructs.h"
 
+#ifdef _WIN32
+using UtilityFunctions::convert_from_utf8_to_utf16;
+#endif
 
 namespace
 {
@@ -504,7 +507,12 @@ void BatchConvertDialog::convert()
         && type != kBinaryFloatSpcSpectrumFile
         && type != kBinaryIntSpcSpectrumFile )
     {
+#ifdef _WIN32
+      output.reset( new std::ofstream( convert_from_utf8_to_utf16(filename).c_str(), std::ios::binary | std::ios::out ) );
+#else
       output.reset( new std::ofstream( outname.c_str(), std::ios::binary | std::ios::out ) );
+#endif
+      
       
       if( !output->is_open() )
       {
@@ -582,8 +590,13 @@ void BatchConvertDialog::convert()
             if( extention.size() > 0 )
               outname = outname + extention;
             
+#ifdef _WIN32
+            std::ofstream output( convert_from_utf8_to_utf16(outname.toUtf8().data()).c_str(),
+                                 std::ios::binary | std::ios::out );
+#else
             std::ofstream output( outname.toUtf8().data(),
                                  std::ios::binary | std::ios::out );
+#endif
             
             if( !output.is_open() )
             {

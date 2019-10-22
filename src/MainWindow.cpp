@@ -1329,7 +1329,12 @@ void MainWindow::dropEvent( QDropEvent *event )
       tmpfilename = UtilityFunctions::temp_file_name( "cambio", temporarydir );
     
       {
+#ifdef _WIN32
+        ofstream file( UtilityFunctions::convert_from_utf8_to_utf16(tmpfilename).c_str(), ios::binary | ios::out );
+#else
         ofstream file( tmpfilename.c_str(), ios::binary | ios::out );
+#endif
+        
         if( !file.write( contents.data(), contents.size() ) )
           throw std::runtime_error( "Failed to write: " + tmpfilename );
       }
