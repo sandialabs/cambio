@@ -167,7 +167,7 @@ IF( APPLE AND NOT IOS AND BUILD_CAMBIO_GUI )
   )
 
   set( MACOSX_BUNDLE_INFO_STRING "Cambio - Sandia National Labs, Will Johnson" )
-  set( MACOSX_BUNDLE_GUI_IDENTIFIER "gov.sandia.cambio" )
+  set( MACOSX_BUNDLE_GUI_IDENTIFIER "gov.sandia.macOS.cambio" )
   set( MACOSX_BUNDLE_LONG_VERSION_STRING "" )
   set( MACOSX_BUNDLE_BUNDLE_NAME "Cambio" )
   set( MACOSX_BUNDLE_SHORT_VERSION_STRING "Cambio" )
@@ -175,6 +175,26 @@ IF( APPLE AND NOT IOS AND BUILD_CAMBIO_GUI )
   set( MACOSX_BUNDLE_COPYRIGHT "Sandia National Labs, Will Johnson" )
   set( MACOSX_BUNDLE_ICON_FILE cambioicon.icns )
   set_source_files_properties( ${cambio_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources" )
+
+  set_target_properties( ${PROJECT_NAME} PROPERTIES XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS
+    "${CMAKE_CURRENT_SOURCE_DIR}/target/osx/cambio.entitlements")
+
+  # With out this next line, Xcode will (silently) fail to build Archive builds
+  set_target_properties( ${PROJECT_NAME} PROPERTIES XCODE_ATTRIBUTE_INSTALL_PATH "/Applications")
+
+  #Figure out the development team ID, and set this info for Xcode so it will default to signing the app
+  #  This is probably a little brittle on other peoples machined
+  execute_process(COMMAND /usr/bin/security find-identity -v -p codesigning OUTPUT_VARIABLE dev_team_ids )
+  STRING(REGEX REPLACE ";" "\\\\;" dev_team_ids "${dev_team_ids}")
+  STRING(REGEX REPLACE "\n" ";" dev_team_ids "${dev_team_ids}")
+  LIST(FILTER dev_team_ids INCLUDE REGEX "Developer ID Application:.+" )
+  STRING(REGEX MATCH "\\(.+\\)" mac_team_id ${dev_team_ids} )
+  STRING(REGEX REPLACE "\\(|\\)" "" mac_team_id "${mac_team_id}")
+  message( "Using Mac Developer Team ID='${mac_team_id}'" )
+
+  set_target_properties( ${PROJECT_NAME} PROPERTIES XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "Mac Developer")
+  set_target_properties( ${PROJECT_NAME} PROPERTIES XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "${mac_team_id}" )
+  set_target_properties( ${PROJECT_NAME} PROPERTIES XCODE_ATTRIBUTE_ENABLE_HARDENED_RUNTIME "YES" )
 ENDIF()
 
 

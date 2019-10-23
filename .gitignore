@@ -1,1 +1,46 @@
+#Project and CMake specific files
+*OUO*
+.svn
+.vscode
+.idea
+.DS_Store
+.cproject
+.project
+.svnignore
+XcodeFiles
+build
+build_*
 documentation
+testing
+README.txt
+*.tmp
+*.zip
+*.tgz
+*.bz2
+*.log
+
+# Xcode spefic (for iOS)
+build/
+DerivedData/
+
+## Various settings
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+
+## Other
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+
+## Obj-C/Swift specific
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
