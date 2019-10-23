@@ -52,6 +52,7 @@
 #include "cambio/BusyIndicator.h"
 #include "cambio/BatchConvertDialog.h"
 #include "SpecUtils/D3SpectrumExport.h"
+#include "SpecUtils/UtilityFunctions.h"
 #include "SpecUtils/SpectrumDataStructs.h"
 
 using namespace std;

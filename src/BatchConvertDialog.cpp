@@ -508,7 +508,7 @@ void BatchConvertDialog::convert()
         && type != kBinaryIntSpcSpectrumFile )
     {
 #ifdef _WIN32
-      output.reset( new std::ofstream( convert_from_utf8_to_utf16(filename).c_str(), std::ios::binary | std::ios::out ) );
+      output.reset( new std::ofstream( convert_from_utf8_to_utf16(outname).c_str(), std::ios::binary | std::ios::out ) );
 #else
       output.reset( new std::ofstream( outname.c_str(), std::ios::binary | std::ios::out ) );
 #endif
