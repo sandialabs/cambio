@@ -546,9 +546,11 @@ int run_command_util( const int argc, char *argv[] )
     )
     ("inputdir", po::value<string>(&inputdir),
      "Input directory.  All files in specified directory will (try to) be"
-     " converted.  Must also specify 'output' option to point to an existing"
-     " directory.  May not be used with 'input' option."
-     "  By default not recursive."
+     " converted.\n"
+     "Must also specify 'output' option to point to an existing directory, as"
+     " well as the 'format' option.\n"
+     "May not be used with 'input' option.\n"
+     "By default not recursive, see 'recursive' option."
     )
     ("recursive", po::value<bool>(&recursive)->default_value(false),
      "[Experimental - use at own risk] "
