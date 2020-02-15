@@ -49,11 +49,12 @@
 #include "cambio/CambioApp.h"
 #include "cambio/SaveWidget.h"
 #include "cambio/MainWindow.h"
+#include "SpecUtils/SpecFile.h"
 #include "cambio/BusyIndicator.h"
+#include "SpecUtils/Filesystem.h"
 #include "cambio/BatchConvertDialog.h"
 #include "SpecUtils/D3SpectrumExport.h"
-#include "SpecUtils/UtilityFunctions.h"
-#include "SpecUtils/SpectrumDataStructs.h"
+
 
 using namespace std;
 
@@ -490,7 +491,7 @@ bool writeIndividualSpectraToOutputFile( const SaveSpectrumAsType format,
   const string utf8_outname = outputfile.filePath().toUtf8().data();
   
 #ifdef _WIN32
-  const std::wstring win_outname = UtilityFunctions::convert_from_utf8_to_utf16(utf8_outname);
+  const std::wstring win_outname = SpecUtils::convert_from_utf8_to_utf16(utf8_outname);
   std::ofstream output( win_outname.c_str(), std::ios::binary | std::ios::out );
 #else
   std::ofstream output( utf8_outname, std::ios::binary | std::ios::out );

@@ -48,11 +48,11 @@
 
 #define BOOST_DATE_TIME_NO_LIB
 
+#include "SpecUtils/SpecFile.h"
 #include "cambio/sandia_logo.h"
 #include "cambio/SpectrumView.h"
 #include "cambio/SpectrumChart.h"
 #include "cambio/AxisLabelUtils.h"
-#include "SpecUtils/SpectrumDataStructs.h"
 
 using namespace std;
 QT_CHARTS_USE_NAMESPACE

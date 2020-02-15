@@ -39,13 +39,10 @@
 #define BOOST_DATE_TIME_NO_LIB
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-#include "cambio/FileDetailWidget.h"
-#include "SpecUtils/UtilityFunctions.h"
-#include "SpecUtils/SpectrumDataStructs.h"
-
-
+#include "SpecUtils/SpecFile.h"
 #include "cambio/FileDetailTools.h"
-
+#include "cambio/FileDetailWidget.h"
+#include "SpecUtils/EnergyCalibration.h"
 
 using namespace std;
 
@@ -660,7 +657,7 @@ void EnergyCalDialog::removeCal()
   eqn.push_back( 0.0f );
   eqn.push_back( 1.0f );
   DeviationPairVec dev_pairs;
-  meas->recalibrate_by_eqn( eqn, dev_pairs, Measurement::Polynomial );
+  meas->recalibrate_by_eqn( eqn, dev_pairs, SpecUtils::EnergyCalType::Polynomial );
 
   m_parent->energyCalUpdated( meas );
 

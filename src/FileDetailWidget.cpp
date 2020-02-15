@@ -41,10 +41,9 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include "SpecUtils/SpecFile.h"
 #include "cambio/FileDetailTools.h"
 #include "cambio/FileDetailWidget.h"
-#include "SpecUtils/UtilityFunctions.h"
-#include "SpecUtils/SpectrumDataStructs.h"
 
 using namespace std;
 

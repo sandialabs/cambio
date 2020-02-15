@@ -46,13 +46,13 @@
 
 #include <boost/scoped_ptr.hpp>
 
+#include "SpecUtils/SpecFile.h"
+#include "SpecUtils/Filesystem.h"
 #include "cambio/BatchConvertDialog.h"
-#include "SpecUtils/UtilityFunctions.h"
 #include "SpecUtils/D3SpectrumExport.h"
-#include "SpecUtils/SpectrumDataStructs.h"
 
 #ifdef _WIN32
-using UtilityFunctions::convert_from_utf8_to_utf16;
+using SpecUtils::convert_from_utf8_to_utf16;
 #endif
 
 namespace
@@ -84,7 +84,7 @@ namespace
   bool file_smaller_than( const std::string &path, void *maxsizeptr )
   {
     const size_t *maxsize = (const size_t *)maxsizeptr;
-    if( UtilityFunctions::file_size(path) > (*maxsize) )
+    if( SpecUtils::file_size(path) > (*maxsize) )
       return false;
     
     return true;
@@ -294,18 +294,18 @@ void BatchConvertDialog::setDirectory( const QString &path )
   const bool recursive = m_recursive->isChecked();
   const bool extfilter = true;
   const size_t maxsize = 250*1024*1024;  //250 MByte, chosen arbitrarily.
-  UtilityFunctions::file_match_function_t filterfcn = extfilter ? &maybe_spec_file : &file_smaller_than;
+  SpecUtils::file_match_function_t filterfcn = extfilter ? &maybe_spec_file : &file_smaller_than;
    
   const std::string srcdir = dir.absolutePath().toUtf8().data();
   std::vector<std::string> files;
   if( recursive )
-    files = UtilityFunctions::recursive_ls( srcdir, filterfcn, (void *)&maxsize );
+    files = SpecUtils::recursive_ls( srcdir, filterfcn, (void *)&maxsize );
   else
-    files = UtilityFunctions::ls_files_in_directory( srcdir, filterfcn, (void *)&maxsize );
+    files = SpecUtils::ls_files_in_directory( srcdir, filterfcn, (void *)&maxsize );
  
   if( files.size() == 0 && !recursive )
   {
-    files = UtilityFunctions::recursive_ls( srcdir, filterfcn, (void *)&maxsize );
+    files = SpecUtils::recursive_ls( srcdir, filterfcn, (void *)&maxsize );
 	m_recursive->setChecked( !files.empty() );
   }
 
@@ -392,14 +392,14 @@ void BatchConvertDialog::convert()
 	  const bool recursive = m_recursive->isChecked();
       const bool extfilter = true;
       const size_t maxsize = 250*1024*1024;  //250 MByte, chosen arbitrarily.
-      UtilityFunctions::file_match_function_t filterfcn = extfilter ? &maybe_spec_file : &file_smaller_than;
+      SpecUtils::file_match_function_t filterfcn = extfilter ? &maybe_spec_file : &file_smaller_than;
    
       const std::string srcdir = info.absolutePath().toUtf8().data();
       std::vector<std::string> files;
       if( recursive )
-        files = UtilityFunctions::recursive_ls( srcdir, filterfcn, (void *)&maxsize );
+        files = SpecUtils::recursive_ls( srcdir, filterfcn, (void *)&maxsize );
       else
-        files = UtilityFunctions::ls_files_in_directory( srcdir, filterfcn, (void *)&maxsize );
+        files = SpecUtils::ls_files_in_directory( srcdir, filterfcn, (void *)&maxsize );
 	  
 	  for( size_t j = 0; j < files.size(); ++j )
 		selectedfiles.push_back( QString(files[j].c_str()) );
@@ -468,7 +468,7 @@ void BatchConvertDialog::convert()
       continue;
     }
     
-    meas.set_filename( UtilityFunctions::filename( meas.filename() ) );
+    meas.set_filename( SpecUtils::filename( meas.filename() ) );
     
     //XXX - doesnt properly account for CHN files
     if( skipexisting && outputInfo.exists() )

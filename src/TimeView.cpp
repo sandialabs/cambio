@@ -37,7 +37,7 @@
 #include <QDragEnterEvent>
 #include <QGraphicsColorizeEffect>
 
-#include "SpecUtils/SpectrumDataStructs.h"
+#include "SpecUtils/SpecFile.h"
 
 #include "cambio/TimeView.h"
 #include "cambio/TimeChart.h"

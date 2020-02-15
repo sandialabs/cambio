@@ -27,13 +27,14 @@
 //#include <boost/algorithm/string/compare.hpp>
 
 #include "SpecUtils_config.h"
+#include "SpecUtils/SpecFile.h"
+#include "SpecUtils/StringAlgo.h"
+#include "SpecUtils/Filesystem.h"
 #include "cambio/CommandLineUtil.h"
-#include "SpecUtils/UtilityFunctions.h"
-#include "SpecUtils/SpectrumDataStructs.h"
 
 using namespace std;
 namespace po = boost::program_options;
-using UtilityFunctions::convert_from_utf8_to_utf16;
+using SpecUtils::convert_from_utf8_to_utf16;
 
 
 #if( SpecUtils_ENABLE_D3_CHART )
@@ -95,7 +96,7 @@ namespace {
   void add_file_meta_info_to_json( std::ostream &output, const MeasurementInfo &info )
   {
     auto jsonEscape = []( string input ) -> string {
-      UtilityFunctions::ireplace_all( input, "\"", "\\\"" );  //ToDo: Properly escape JSON strings!
+      SpecUtils::ireplace_all( input, "\"", "\\\"" );  //ToDo: Properly escape JSON strings!
       return input;
     };
     
@@ -343,7 +344,7 @@ namespace
         for( const auto &finalname : final_n42_names )
         {
           assert( finalname.size() >= 3 );
-          if( UtilityFunctions::iequals(finalname.substr(0,3), n) )
+          if( SpecUtils::iequals_ascii(finalname.substr(0,3), n) )
             return true;
         }//for
         return false;
@@ -367,8 +368,8 @@ namespace
       //For detectors with names like "DetectorInfoPan1DetG2"
       //  If only could use regex...
       if( newprefix.empty() && name.size()==21
-          && UtilityFunctions::istarts_with(name, "DetectorInfoPan")
-          && UtilityFunctions::iequals(name.substr(16).substr(0,4), "DetG")
+          && SpecUtils::istarts_with(name, "DetectorInfoPan")
+          && SpecUtils::iequals_ascii(name.substr(16).substr(0,4), "DetG")
           && isdigit(name[15]) && isdigit(name[20]) )
       {
         string candidate;
@@ -744,7 +745,7 @@ int run_command_util( const int argc, char *argv[] )
       if( opt.unregistered )
       {
         //Skip warning on the '--convert' flag for using the GUI EXE from command line.
-        if( UtilityFunctions::iequals( opt.string_key, "convert") && opt.value.empty() )
+        if( SpecUtils::iequals_ascii( opt.string_key, "convert") && opt.value.empty() )
           continue;
         
         cerr << "Warning, command line argument '" << opt.string_key
@@ -867,14 +868,14 @@ int run_command_util( const int argc, char *argv[] )
       return 14;
     }
     
-    if( !UtilityFunctions::is_directory(inputdir) )
+    if( !SpecUtils::is_directory(inputdir) )
     {
       cerr << "Input directory '" << inputdir << "' is not a valid directory"
            << endl;
       return 15;
     }
     
-    if( !UtilityFunctions::is_directory(outputname) )
+    if( !SpecUtils::is_directory(outputname) )
     {
       cerr << "Output directory '" << outputname << "' is not a valid directory"
            << endl;
@@ -882,9 +883,9 @@ int run_command_util( const int argc, char *argv[] )
     }
     
     if( recursive )
-      inputfiles = UtilityFunctions::recursive_ls(inputdir);
+      inputfiles = SpecUtils::recursive_ls(inputdir);
     else
-      inputfiles = UtilityFunctions::ls_files_in_directory(inputdir);
+      inputfiles = SpecUtils::ls_files_in_directory(inputdir);
   }//if( !inputdir.empty()  )
   
 
@@ -925,7 +926,7 @@ int run_command_util( const int argc, char *argv[] )
   }//if( outputname.empty() )
   
   
-  if( inputfiles.size() > 1 && !UtilityFunctions::is_directory(outputname) )
+  if( inputfiles.size() > 1 && !SpecUtils::is_directory(outputname) )
   {
     cerr << "You must specify an output directory when there are mutliple input"
          << " files" << endl;
@@ -933,7 +934,7 @@ int run_command_util( const int argc, char *argv[] )
   }//if( mutliple input files, and not a output directory )
   
   
-  if( !force_writing && UtilityFunctions::is_file(outputname) )
+  if( !force_writing && SpecUtils::is_file(outputname) )
   {
     cerr << "Output file ('" << outputname << "') already exists; you can force"
          << " overwriting it by using the --force option." << endl;
@@ -956,8 +957,8 @@ int run_command_util( const int argc, char *argv[] )
       outputformatstr = outputname.substr(pos+1);
   }//if( outputformatstr.empty() )
   
-  UtilityFunctions::trim( outputformatstr );
-  UtilityFunctions::to_lower( outputformatstr );
+  SpecUtils::trim( outputformatstr );
+  SpecUtils::to_lower_ascii( outputformatstr );
     
   if( str_to_save_type.find(outputformatstr) == str_to_save_type.end() )
   {
@@ -986,7 +987,7 @@ int run_command_util( const int argc, char *argv[] )
   for( OutputMetaInfoDetectorType i = OutputMetaInfoDetectorType(0);
        i < NumOutputMetaInfoDetectorType; i = OutputMetaInfoDetectorType(i+1) )
   {
-    if( UtilityFunctions::iequals( newdettype, OutputMetaInfoDetectorNames[i] ) )
+    if( SpecUtils::iequals_ascii( newdettype, OutputMetaInfoDetectorNames[i] ) )
     {
       metatype = i;
       break;
@@ -1043,7 +1044,7 @@ int run_command_util( const int argc, char *argv[] )
   //Make sure all the input files exist
   for( size_t i = 0; i < inputfiles.size(); ++i )
   {
-    if( !UtilityFunctions::is_file(inputfiles[i]) )
+    if( !SpecUtils::is_file(inputfiles[i]) )
     {
       cerr << "Input file '" << inputfiles[i] << "' doesnt exist, or cant be"
            << " accessed." << endl;
@@ -1063,14 +1064,14 @@ int run_command_util( const int argc, char *argv[] )
 
   
   string outdir, outname;
-  if( UtilityFunctions::is_directory(outputname) )
+  if( SpecUtils::is_directory(outputname) )
   {
     outname = "";
     outdir = outputname;
   }else
   {
-    outname = UtilityFunctions::filename(outputname);
-    outdir = UtilityFunctions::parent_path(outputname);
+    outname = SpecUtils::filename(outputname);
+    outdir = SpecUtils::parent_path(outputname);
   }
   
   string ending = suggestedNameEnding( format );
@@ -1078,7 +1079,7 @@ int run_command_util( const int argc, char *argv[] )
  #if( SpecUtils_ENABLE_D3_CHART )
   if( format == kD3HtmlSpectrumFile )
   {
-    UtilityFunctions::to_lower( html_to_include );
+    SpecUtils::to_lower_ascii( html_to_include );
     
     if( outputformatstr == "json" )
       html_to_include = "json";
@@ -1108,8 +1109,8 @@ int run_command_util( const int argc, char *argv[] )
            << " (for arg '" << detrename << "')." << endl;
       return 9;
     }//
-    const string from_name = UtilityFunctions::trim_copy( detrename.substr(0,equal_pos) );
-    const string to_name = UtilityFunctions::trim_copy( detrename.substr(equal_pos+1) );
+    const string from_name = SpecUtils::trim_copy( detrename.substr(0,equal_pos) );
+    const string to_name = SpecUtils::trim_copy( detrename.substr(equal_pos+1) );
     det_renames[from_name] = to_name;
     renamed_dets.push_back( to_name );
   }//for( string detrename : detector_renaimings )
@@ -1123,7 +1124,7 @@ int run_command_util( const int argc, char *argv[] )
   {
     try
     {
-      if( !UtilityFunctions::is_file(inputfiles[i]) )
+      if( !SpecUtils::is_file(inputfiles[i]) )
       {
         input_didnt_exist = true;
         cerr << "Input file '" << inputfiles[i] << "' doesnt exist, or cant be"
@@ -1153,19 +1154,19 @@ int run_command_util( const int argc, char *argv[] )
         string prefered_variant;
         for( const auto str : cals )
         {
-          if( UtilityFunctions::icontains( str, "Lin") )
+          if( SpecUtils::icontains( str, "Lin") )
             prefered_variant = str;
         }//for( const auto &str : cals )
         
         if( prefered_variant.empty() )
         {
           auto getMev = []( string str ) -> double {
-            UtilityFunctions::to_lower(str);
+            SpecUtils::to_lower_ascii(str);
             size_t pos = str.find("mev");
             if( pos == string::npos )
               return -999.9;
             str = str.substr(0,pos);
-            UtilityFunctions::trim( str );
+            SpecUtils::trim( str );
             for( size_t index = str.size(); index > 0; --index )
             {
               const char c = str[index-1];
@@ -1320,12 +1321,12 @@ int run_command_util( const int argc, char *argv[] )
       
       if( savename.empty() )
       {
-        savename = UtilityFunctions::filename(inname);
+        savename = SpecUtils::filename(inname);
         const string::size_type pos = savename.find_last_of( '.' );
         if( pos && (pos != string::npos) && (pos < (savename.size()-1)) )
         {
           string ext = savename.substr(pos+1);
-          UtilityFunctions::to_lower( ext );
+          SpecUtils::to_lower_ascii( ext );
         
           if( std::count(spec_exts, spec_exts+len_spec_exts, ext) )
             savename = savename.substr( 0, pos );
@@ -1336,22 +1337,22 @@ int run_command_util( const int argc, char *argv[] )
       if( pos && (pos != string::npos) && (pos < (savename.size()-1)) )
       {
         string ext = savename.substr(pos+1);
-        UtilityFunctions::to_lower( ext );
+        SpecUtils::to_lower_ascii( ext );
         if( ext != ending )
           savename += "." + ending;
       }else
         savename += "." + ending;
     
-      string saveto = UtilityFunctions::append_path( outdir, savename );
+      string saveto = SpecUtils::append_path( outdir, savename );
     
       if( !inputdir.empty() && recursive )
       {
         assert( outputname == outdir );
         //Need to get relative path difference between inputdir and inputfiles[i]
         //and then make that hierarchy of directories, if it doesnt already exist.
-        //UtilityFunctions::create_directory(const std::string &name)
+        //SpecUtils::create_directory(const std::string &name)
         
-        const string reldir = UtilityFunctions::fs_relative( inputdir, UtilityFunctions::parent_path(inputfiles[i]) );
+        const string reldir = SpecUtils::fs_relative( inputdir, SpecUtils::parent_path(inputfiles[i]) );
         
         //ToDo: implement something like UtilityFunctions:recursive_create_directory(...)
         //      rather than this huge hack to recursively make directories.
@@ -1360,29 +1361,29 @@ int run_command_util( const int argc, char *argv[] )
         std::deque<string> dirstomake;
         while( !tmpdirstr.empty() && tmpdirstr!= "." )
         {
-          string fullpath = UtilityFunctions::append_path( outdir, tmpdirstr );
-          string parent = UtilityFunctions::parent_path( fullpath );
-          string leaf = UtilityFunctions::fs_relative( parent, fullpath );
+          string fullpath = SpecUtils::append_path( outdir, tmpdirstr );
+          string parent = SpecUtils::parent_path( fullpath );
+          string leaf = SpecUtils::fs_relative( parent, fullpath );
           dirstomake.push_front( leaf );
-          tmpdirstr = UtilityFunctions::fs_relative( outdir, parent );
+          tmpdirstr = SpecUtils::fs_relative( outdir, parent );
         }
         
         tmpdirstr = outdir;
         for( const auto leaf : dirstomake )
         {
-          tmpdirstr = UtilityFunctions::append_path( tmpdirstr, leaf );
-          if( !UtilityFunctions::is_directory(tmpdirstr) )
+          tmpdirstr = SpecUtils::append_path( tmpdirstr, leaf );
+          if( !SpecUtils::is_directory(tmpdirstr) )
           {
             //cout << "Will make directory '" << tmpdirstr << "'" << endl;
-            UtilityFunctions::create_directory(tmpdirstr);
+            SpecUtils::create_directory(tmpdirstr);
           }else
           {
             //cout << "Dont need to make directory '" << tmpdirstr << "'" << endl;
           }
         }//for( const auto leaf : dirstomake )
         
-        const string fulloutdir = UtilityFunctions::append_path( outdir, reldir );
-        saveto = UtilityFunctions::append_path( fulloutdir, savename );
+        const string fulloutdir = SpecUtils::append_path( outdir, reldir );
+        saveto = SpecUtils::append_path( fulloutdir, savename );
         
         //cout << "Continuing rather than writing" << endl;
         //continue; //debug
@@ -1541,13 +1542,13 @@ int run_command_util( const int argc, char *argv[] )
       
         if( meass.size()<2 || summ_meas_for_single_out )
         {
-          if( !force_writing && UtilityFunctions::is_file(saveto) )
+          if( !force_writing && SpecUtils::is_file(saveto) )
           {
             cerr << "Output file '" << saveto << "' existed, and --force not"
                  << " specified, not saving file" << endl;
             file_existed = true;
             continue;
-          }//if( !force_writing && UtilityFunctions::is_file(savename) )
+          }//if( !force_writing && SpecUtils::is_file(savename) )
           
 #ifdef _WIN32
           ofstream output( convert_from_utf8_to_utf16(saveto).c_str(), ios_base::binary | ios_base::out );
@@ -1562,7 +1563,7 @@ int run_command_util( const int argc, char *argv[] )
             continue;
           }
         
-          bool wrote;
+          bool wrote = false;
           std::set<int> detnumset;
           for( size_t i = 0; i < detnums.size(); ++i )
             detnumset.insert( detnums[i] );
@@ -1578,7 +1579,9 @@ int run_command_util( const int argc, char *argv[] )
           else if( format == kIaeaSpeSpectrumFile )
             wrote = info.write_iaea_spe( output, samplenums, detnumset );
           else
+          {
             assert( 0 );
+          }
         
           if( !wrote )
           {
@@ -1627,13 +1630,13 @@ int run_command_util( const int argc, char *argv[] )
               if( extention.size() > 0 )
                 outname = outname + extention;
             
-              if( !force_writing && UtilityFunctions::is_file(outname) )
+              if( !force_writing && SpecUtils::is_file(outname) )
               {
                 cerr << "Output file '" << outname << "' existed, and --force not"
                      << " specified, not saving file" << endl;
                 file_existed = true;
                 continue;
-              }//if( !force_writing && UtilityFunctions::is_file(savename) )
+              }//if( !force_writing && SpecUtils::is_file(savename) )
 
 #ifdef _WIN32
               ofstream output( convert_from_utf8_to_utf16(outname).c_str(), ios_base::binary | ios_base::out );
@@ -1679,13 +1682,13 @@ int run_command_util( const int argc, char *argv[] )
         }//if( we should sum all of then and then save ) / else
       }else  //if( a single spectrum output format )
       {
-        if( !force_writing && UtilityFunctions::is_file(saveto) )
+        if( !force_writing && SpecUtils::is_file(saveto) )
         {
           cerr << "Output file '" << saveto << "' existed, and --force not"
                << " specified, not saving file" << endl;
           file_existed = true;
           continue;
-        }//if( !force_writing && UtilityFunctions::is_file(savename) )
+        }//if( !force_writing && SpecUtils::is_file(savename) )
       
 #ifdef _WIN32
         ofstream output( convert_from_utf8_to_utf16(saveto).c_str(), ios_base::binary | ios_base::out );
@@ -1738,7 +1741,7 @@ int run_command_util( const int argc, char *argv[] )
             
             //Should probably look to see if this is an obvious case where we
             //  should show the foreground/background on the same chart.
-            if( UtilityFunctions::iequals( html_to_include, "json" ) )
+            if( SpecUtils::iequals_ascii( html_to_include, "json" ) )
             {
               output << "[\n\t";
               
@@ -1768,7 +1771,7 @@ int run_command_util( const int argc, char *argv[] )
               }//for( loop over measurements )
               
               output << "\n]" << endl;
-            }else if( UtilityFunctions::iequals( html_to_include, "css" ) )
+            }else if( SpecUtils::iequals_ascii( html_to_include, "css" ) )
             {
 #if( SpecUtils_D3_SUPPORT_FILE_STATIC )
               output << D3SpectrumExport::spectrum_char_d3_css() << endl;
@@ -1788,7 +1791,7 @@ int run_command_util( const int argc, char *argv[] )
 #endif
               break;
               wrote = output.good();
-            }else if( UtilityFunctions::iequals( html_to_include, "js" ) )
+            }else if( SpecUtils::iequals_ascii( html_to_include, "js" ) )
             {
 #if( SpecUtils_D3_SUPPORT_FILE_STATIC )
               output << D3SpectrumExport::spectrum_chart_d3_js() << endl;
@@ -1808,7 +1811,7 @@ int run_command_util( const int argc, char *argv[] )
 #endif
               wrote = output.good();
               break;
-            }else if( UtilityFunctions::iequals( html_to_include, "d3" ) )
+            }else if( SpecUtils::iequals_ascii( html_to_include, "d3" ) )
             {
 #if( SpecUtils_D3_SUPPORT_FILE_STATIC )
               output << D3SpectrumExport::d3_js() << endl;
@@ -1828,11 +1831,11 @@ int run_command_util( const int argc, char *argv[] )
 #endif
               wrote = output.good();
               break;
-            }else if( UtilityFunctions::iequals( html_to_include, "controls" ) )
+            }else if( SpecUtils::iequals_ascii( html_to_include, "controls" ) )
             {
               cerr << "Writing controls HTML is not supported yet - sorry" << endl;
               return 12;
-            }else if( UtilityFunctions::iequals( html_to_include, "all" ) )
+            }else if( SpecUtils::iequals_ascii( html_to_include, "all" ) )
             {
               using namespace D3SpectrumExport;
               D3SpectrumChartOptions fileopts;
@@ -1840,7 +1843,7 @@ int run_command_util( const int argc, char *argv[] )
               specopts.line_color = "black";
               specopts.display_scale_factor = 1.0;
               
-              fileopts.m_title = UtilityFunctions::filename( inname );
+              fileopts.m_title = SpecUtils::filename( inname );
               fileopts.m_useLogYAxis = true;
               fileopts.m_showVerticalGridLines = false;
               fileopts.m_showHorizontalGridLines = false;
@@ -1957,15 +1960,15 @@ bool requested_command_line_from_gui( const int argc, char *argv[] )
   for( int i = 0; i < argc; ++i )
   {
     string arg = argv[i];
-    UtilityFunctions::trim( arg );
-    if( UtilityFunctions::iequals( arg, "--convert" ) )
+    SpecUtils::trim( arg );
+    if( SpecUtils::iequals_ascii( arg, "--convert" ) )
     {
       return true;
     }
     
     if( arg.size() > 1 && arg[0]=='-' && isalpha(arg[1])
-        && UtilityFunctions::contains(arg, "c")
-        && !UtilityFunctions::contains(arg, "-NS") ) //-NSDocumentRevisionsDebugMode
+        && SpecUtils::contains(arg, "c")
+        && !SpecUtils::contains(arg, "-NS") ) //-NSDocumentRevisionsDebugMode
     {
       return true;
     }

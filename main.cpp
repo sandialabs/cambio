@@ -81,7 +81,7 @@ int main( int argc, char *argv[] )
 #include <shellapi.h>
 
 #include <string>
-#include "SpecUtils/UtilityFunctions.h"
+#include "SpecUtils/Filesystem.h"
 
 /** Get command line arguments encoded as UTF-8.
  This function just leaks the memory
@@ -100,7 +100,7 @@ void getUtf8Args( int &argc, char ** &argv )
   for( int i = 0; i < argc; ++i)
   {
     //printf("Argument: %d: %ws\n", i, argvw[i]);
-    const std::string asutf8 = UtilityFunctions::convert_from_utf16_to_utf8( argvw[i] );
+    const std::string asutf8 = SpecUtils::convert_from_utf16_to_utf8( argvw[i] );
     argv[i] = (char *)malloc( sizeof(char)*(asutf8.size()+1) );
     strcpy( argv[i], asutf8.c_str() );
   }//for( int i = 0; i < argc; ++i)

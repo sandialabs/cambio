@@ -13,7 +13,7 @@
   <key>CFBundleIconFile</key>
   <string>cambioicon</string>
   <key>CFBundleIdentifier</key>
-  <string>com.sandia.Cambio</string>
+  <string>com.sandia.macOS.Cambio</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>
