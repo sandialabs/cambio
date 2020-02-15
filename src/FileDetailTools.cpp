@@ -146,10 +146,10 @@ m_parent( parent )
     
     m_applyToGroup = new QButtonGroup( box );
     
-    std::vector< MeasurementConstShrdPtr > meass
+    std::vector< std::shared_ptr<const Measurement> > meass
                                        = m_parent->m_measurment->measurements();
     
-    std::vector< MeasurementConstShrdPtr >::const_iterator pos
+    std::vector< std::shared_ptr<const Measurement> >::const_iterator pos
                     = std::find( meass.begin(), meass.end(), m_parent->m_meas );
     const int record = 1 + static_cast<int>( pos - meass.begin() );
     
@@ -399,7 +399,7 @@ TruncateChannelsDialog::TruncateChannelsDialog( FileDetailWidget *parent )
   //could also test properties_flags_ kHasCommonBinning ...
   for( size_t i = 0; i < meass.size(); ++i )
   {
-    const ShrdConstFVecPtr &energies = meass[i]->channel_energies();
+    const std::shared_ptr<const std::vector<float>> &energies = meass[i]->channel_energies();
     if( energies && energies->size() )
       xaxiss.insert( energies );
   }//for( size_t i = 0; i < measurements.size(); ++i )
@@ -426,7 +426,7 @@ TruncateChannelsDialog::TruncateChannelsDialog( FileDetailWidget *parent )
     
     m_applyToGroup = new QButtonGroup( box );
     
-    std::vector< MeasurementConstShrdPtr >::const_iterator pos
+    std::vector< std::shared_ptr<const Measurement> >::const_iterator pos
                   = std::find( meass.begin(), meass.end(), m_parent->m_meas );
     const int record = 1 + static_cast<int>( pos - meass.begin() );
     
@@ -656,7 +656,7 @@ void EnergyCalDialog::removeCal()
   std::vector<float> eqn;
   eqn.push_back( 0.0f );
   eqn.push_back( 1.0f );
-  DeviationPairVec dev_pairs;
+  std::vector<std::pair<float,float>> dev_pairs;
   meas->recalibrate_by_eqn( eqn, dev_pairs, SpecUtils::EnergyCalType::Polynomial );
 
   m_parent->energyCalUpdated( meas );

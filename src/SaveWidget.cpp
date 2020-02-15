@@ -467,15 +467,15 @@ bool writeIndividualSpectraToOutputFile( const SaveSpectrumAsType format,
         dets.insert( meas->detector_numbers()[i] );
     
     MeasurementInfo info = *meas;
-    vector<MeasurementConstShrdPtr> toremove;
-    foreach( MeasurementConstShrdPtr oldm, info.measurements() )
+    vector<std::shared_ptr<const Measurement>> toremove;
+    foreach( std::shared_ptr<const Measurement> oldm, info.measurements() )
     {
       if( !samplenums.count(oldm->sample_number())
          || !dets.count(oldm->detector_number()) )
       {
         toremove.push_back( oldm );
       }
-    }//foreach( MeasurementConstShrdPtr oldm, info.measurements() )
+    }//foreach( std::shared_ptr<const Measurement> oldm, info.measurements() )
     
     info.remove_measurments( toremove );
     
@@ -961,7 +961,7 @@ void SaveWidget::save()
         ok = true;
         int nwroteone = 1;
         
-        foreach( MeasurementConstShrdPtr meas, m_measurment->measurements() )
+        foreach( std::shared_ptr<const Measurement> meas, m_measurment->measurements() )
         {
           if( !meas )
             continue;
@@ -991,7 +991,7 @@ void SaveWidget::save()
             ok = false;
             qDebug() << "Logic error finding detector number in SaveWidget::save()";
           }
-        }//foreach( MeasurementConstShrdPtr meas, m_measurment->measurements() )
+        }//foreach( std::shared_ptr<const Measurement> meas, m_measurment->measurements() )
         
         break;
       }//case kEachSpectraInSeperateFile:
@@ -1078,7 +1078,7 @@ void SaveWidget::save()
             return;
         }//if( samplenums.size() > 20 )
         
-        foreach( MeasurementConstShrdPtr meas, m_measurment->measurements() )
+        foreach( std::shared_ptr<const Measurement> meas, m_measurment->measurements() )
         {
           if( !meas )
             continue;
@@ -1108,7 +1108,7 @@ void SaveWidget::save()
             ok = false;
             qDebug() << "Logic error finding detector number in SaveWidget::save()";
           }
-        }//foreach( MeasurementConstShrdPtr meas, m_measurment->measurements() )
+        }//foreach( std::shared_ptr<const Measurement> meas, m_measurment->measurements() )
 
         break;
       }//case kEachSpecToSeperateFile:
@@ -1120,20 +1120,20 @@ void SaveWidget::save()
         const vector<bool> all_dets( m_measurment->detector_numbers().size(), true );
         const set<int> sample_nums = m_measurment->sample_numbers();
         
-        vector<MeasurementShrdPtr> samplemeas;
+        vector<std::shared_ptr<Measurement>> samplemeas;
         
         foreach( const int sample, sample_nums )
         {
           set<int> num;
           num.insert( sample );
-          MeasurementShrdPtr m = m_measurment->sum_measurements( num, all_dets );
+          std::shared_ptr<Measurement> m = m_measurment->sum_measurements( num, all_dets );
           if( m )
             samplemeas.push_back( m );
         }//foreach( const int sample, sample_nums )
         
         info->remove_measurments( info->measurements() );
         
-        foreach( MeasurementShrdPtr m, samplemeas )
+        foreach( std::shared_ptr<Measurement> m, samplemeas )
           info->add_measurment( m, false );
         info->cleanup_after_load(); //necassarry
         

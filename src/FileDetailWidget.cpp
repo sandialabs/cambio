@@ -345,7 +345,7 @@ void FileDetailWidget::changeRecord( int record )
   }//if( !valid )
   
   char buffer[128];
-  MeasurementConstShrdPtr meas = m_measurment->measurements()[record-1];
+  std::shared_ptr<const Measurement> meas = m_measurment->measurements()[record-1];
   m_meas = meas;
   
   QDateTime startime;
@@ -760,12 +760,12 @@ void FileDetailWidget::updateDisplay( std::shared_ptr<MeasurementInfo> meas,
   for( size_t i = 0; i < remarks.size(); ++i )
     m_fileComments->append( remarks[i].c_str() );
   
-  vector< MeasurementConstShrdPtr > m = m_measurment->measurements();
+  vector< std::shared_ptr<const Measurement> > m = m_measurment->measurements();
   m_record->setRange( 1, static_cast<int>(m.size()) );
   
   if( samplenums.size() && detectors.size() )
   {
-    MeasurementConstShrdPtr record;
+    std::shared_ptr<const Measurement> record;
     
     foreach( int sample, samplenums )
     {
@@ -790,7 +790,7 @@ void FileDetailWidget::updateDisplay( std::shared_ptr<MeasurementInfo> meas,
       changeRecord( 1 );
     }else
     {
-      vector< MeasurementConstShrdPtr >::const_iterator pos;
+      vector< std::shared_ptr<const Measurement> >::const_iterator pos;
       pos = std::find( m.begin(), m.end(), record );
       if( pos == m.end() )
         changeRecord( 1 );

@@ -881,13 +881,13 @@ void MainWindow::calculateTimeSeriesData(
   
   foreach( const int sample, sample_numbers )
   {
-    const vector< MeasurementConstShrdPtr > meas
+    const vector< std::shared_ptr<const Measurement> > meas
                                   = m_measurment->sample_measurements( sample );
     
     if( meas.empty() )
       continue;
     
-    foreach( const MeasurementConstShrdPtr &m, meas )
+    foreach( const std::shared_ptr<const Measurement> &m, meas )
     {
       if( !dets.count( m->detector_number() ) )
         continue;
@@ -934,7 +934,7 @@ void MainWindow::calculateTimeSeriesData(
     
     int bin = static_cast<int>(pos - begin) + 1;  //XXX - I'm not totally sure of this
     
-    const vector< MeasurementConstShrdPtr > meas
+    const vector< std::shared_ptr<const Measurement> > meas
                          = m_measurment->sample_measurements( sample_number );
     
     float num_gamma = 0.0f, num_nuteron = 0.0f, live_time = 0.0f;

@@ -1536,7 +1536,7 @@ int run_command_util( const int argc, char *argv[] )
           || format == kIaeaSpeSpectrumFile
          )
       {
-        const vector< MeasurementConstShrdPtr > meass = info.measurements();
+        const vector< std::shared_ptr<const Measurement> > meass = info.measurements();
         const std::set<int> samplenums = info.sample_numbers();
         const std::vector<int> detnums = info.detector_numbers();
       
