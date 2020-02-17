@@ -116,7 +116,7 @@ m_parent( parent )
   m_status = new QLabel();
   layout->addWidget( m_status, layout->rowCount(), 0, 1, 2 );
   
-  const vector< std::shared_ptr<const Measurement> > measurements
+  const vector< std::shared_ptr<const SpecUtils::Measurement> > measurements
   = m_parent->m_measurment->measurements();
   const size_t nmeas = measurements.size();
   const size_t ngammachan = m_parent->m_meas->num_gamma_channels();
@@ -146,10 +146,10 @@ m_parent( parent )
     
     m_applyToGroup = new QButtonGroup( box );
     
-    std::vector< std::shared_ptr<const Measurement> > meass
+    std::vector< std::shared_ptr<const SpecUtils::Measurement> > meass
                                        = m_parent->m_measurment->measurements();
     
-    std::vector< std::shared_ptr<const Measurement> >::const_iterator pos
+    std::vector< std::shared_ptr<const SpecUtils::Measurement> >::const_iterator pos
                     = std::find( meass.begin(), meass.end(), m_parent->m_meas );
     const int record = 1 + static_cast<int>( pos - meass.begin() );
     
@@ -393,7 +393,7 @@ TruncateChannelsDialog::TruncateChannelsDialog( FileDetailWidget *parent )
   QObject::connect( m_upperEnergy, SIGNAL(valueChanged(double)), this, SLOT(energyRangeChanged()) );
   
   set<std::shared_ptr<const vector<float> > > xaxiss;
-  const vector< std::shared_ptr<const Measurement> > meass
+  const vector< std::shared_ptr<const SpecUtils::Measurement> > meass
                                        = m_parent->m_measurment->measurements();
   
   //could also test properties_flags_ kHasCommonBinning ...
@@ -426,7 +426,7 @@ TruncateChannelsDialog::TruncateChannelsDialog( FileDetailWidget *parent )
     
     m_applyToGroup = new QButtonGroup( box );
     
-    std::vector< std::shared_ptr<const Measurement> >::const_iterator pos
+    std::vector< std::shared_ptr<const SpecUtils::Measurement> >::const_iterator pos
                   = std::find( meass.begin(), meass.end(), m_parent->m_meas );
     const int record = 1 + static_cast<int>( pos - meass.begin() );
     
@@ -502,7 +502,7 @@ void TruncateChannelsDialog::doChanges()
 
 void TruncateChannelsDialog::energyRangeChanged()
 {
-  std::shared_ptr<const Measurement> m = m_parent->m_meas;
+  std::shared_ptr<const SpecUtils::Measurement> m = m_parent->m_meas;
   
   if( !m )
     return;
@@ -549,7 +549,7 @@ void TruncateChannelsDialog::energyRangeChanged()
 
 void TruncateChannelsDialog::channelRangeChanged()
 {
-  std::shared_ptr<const Measurement> m = m_parent->m_meas;
+  std::shared_ptr<const SpecUtils::Measurement> m = m_parent->m_meas;
   
   if( !m )
     return;
@@ -647,9 +647,9 @@ EnergyCalDialog::~EnergyCalDialog()
   
 void EnergyCalDialog::removeCal()
 {
-  std::shared_ptr<MeasurementInfo> meas = m_parent->m_measurment;
+  std::shared_ptr<SpecUtils::SpecFile> meas = m_parent->m_measurment;
 
-  //std::vector< std::shared_ptr<const Measurement> > meass = m_parent->m_measurment->measurements();
+  //std::vector< std::shared_ptr<const SpecUtils::Measurement> > meass = m_parent->m_measurment->measurements();
   if( !meas )
     return;
 
@@ -669,7 +669,7 @@ void EnergyCalDialog::removeCal()
 }//void removeCal()
   
  
-void EnergyCalDialog::updateDisplay( std::shared_ptr<MeasurementInfo> meas,
+void EnergyCalDialog::updateDisplay( std::shared_ptr<SpecUtils::SpecFile> meas,
                                       std::set<int> samplenums,
                                       std::vector<bool> detectors )
 {

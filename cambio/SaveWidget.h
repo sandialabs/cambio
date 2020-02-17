@@ -37,7 +37,7 @@ class QGridLayout;
 class QListWidget;
 class QButtonGroup;
 
-class MeasurementInfo;
+namespace SpecUtils{ class SpecFile; }
 class BatchConvertDialog;
 
 class SaveWidget : public QWidget
@@ -52,7 +52,7 @@ public:
   void initBatchConvertion( QList<QString> files );
 
 public slots:
-  void updateDisplay( std::shared_ptr<MeasurementInfo> meas,
+  void updateDisplay( std::shared_ptr<SpecUtils::SpecFile> meas,
                       std::set<int> samplenums,
                       std::vector<bool> detectors );
 
@@ -154,7 +154,7 @@ protected:
   
   std::set<int> m_samplenums;
   std::vector<bool> m_detectors;
-  std::shared_ptr<MeasurementInfo> m_measurment;
+  std::shared_ptr<SpecUtils::SpecFile> m_measurment;
 };//class SaveWidget
 
 #endif

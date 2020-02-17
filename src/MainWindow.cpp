@@ -284,7 +284,7 @@ MainWindow::MainWindow( QWidget *parent, Qt::WindowFlags flags )
 #endif
   
   //
-  qRegisterMetaType< std::shared_ptr<MeasurementInfo> >("std::shared_ptr<MeasurementInfo>");
+  qRegisterMetaType< std::shared_ptr<SpecUtils::SpecFile> >("std::shared_ptr<SpecUtils::SpecFile>");
   
   QObject::connect( m_spectrum, SIGNAL(fileDropped(QDropEvent*)),
                    this, SLOT(recievedDropEvent(QDropEvent*)));
@@ -307,14 +307,14 @@ MainWindow::MainWindow( QWidget *parent, Qt::WindowFlags flags )
                    this, SLOT(timeRangeSelected(int,int,Qt::KeyboardModifiers)) );
   
   
-  QObject::connect( this, SIGNAL(displayedSpectrumChanged(std::shared_ptr<MeasurementInfo>,std::set<int>,std::vector<bool>)),
-                    m_save, SLOT(updateDisplay(std::shared_ptr<MeasurementInfo>,std::set<int>,std::vector<bool>)) );
+  QObject::connect( this, SIGNAL(displayedSpectrumChanged(std::shared_ptr<SpecUtils::SpecFile>,std::set<int>,std::vector<bool>)),
+                    m_save, SLOT(updateDisplay(std::shared_ptr<SpecUtils::SpecFile>,std::set<int>,std::vector<bool>)) );
 
-  QObject::connect( this, SIGNAL(displayedSpectrumChanged(std::shared_ptr<MeasurementInfo>,std::set<int>,std::vector<bool>)),
-                    m_detail, SLOT(updateDisplay(std::shared_ptr<MeasurementInfo>,std::set<int>,std::vector<bool>)) );
+  QObject::connect( this, SIGNAL(displayedSpectrumChanged(std::shared_ptr<SpecUtils::SpecFile>,std::set<int>,std::vector<bool>)),
+                    m_detail, SLOT(updateDisplay(std::shared_ptr<SpecUtils::SpecFile>,std::set<int>,std::vector<bool>)) );
   
-  QObject::connect( this, SIGNAL(displayedSpectrumChanged(std::shared_ptr<MeasurementInfo>,std::set<int>,std::vector<bool>)),
-                    m_time, SLOT(spectrumSampleNumbersChanged(std::shared_ptr<MeasurementInfo>,std::set<int>,std::vector<bool>)) );
+  QObject::connect( this, SIGNAL(displayedSpectrumChanged(std::shared_ptr<SpecUtils::SpecFile>,std::set<int>,std::vector<bool>)),
+                    m_time, SLOT(spectrumSampleNumbersChanged(std::shared_ptr<SpecUtils::SpecFile>,std::set<int>,std::vector<bool>)) );
   
   QObject::connect( m_loglin, SIGNAL(pressed()),
                     this, SLOT(toggleLogLinearYAxis()) );
@@ -631,8 +631,7 @@ void MainWindow::timeRangeSelected( int firstsample, int lastsample,
   if( m_displayedSampleNumbers.empty() )
     m_displayedSampleNumbers = sample_numbers;
   
-  std::shared_ptr<Measurement> meas
-    = m_measurment->sum_measurements( m_displayedSampleNumbers, m_detectorsDisplayed );
+  auto meas = m_measurment->sum_measurements( m_displayedSampleNumbers, m_detectorsDisplayed );
   
   setTimeText( meas );
   m_spectrum->setSpectrum( meas, true, m_measurment->filename().c_str() );
@@ -728,8 +727,7 @@ void MainWindow::updateForSampleNumChange()
   
   m_displayedSampleNumbers.clear();
   m_displayedSampleNumbers.insert( m_currentSampleNum );
-  std::shared_ptr<Measurement> meas
-             = m_measurment->sum_measurements( m_displayedSampleNumbers,
+  auto meas = m_measurment->sum_measurements( m_displayedSampleNumbers,
                                                m_detectorsDisplayed );
   
   string title = !!meas ? meas->title() : string("");
@@ -819,7 +817,7 @@ void MainWindow::manualChangedSample()
 }//void manualChangedSample();
 
 
-void MainWindow::setTimeText( std::shared_ptr<const Measurement> meas )
+void MainWindow::setTimeText( std::shared_ptr<const SpecUtils::Measurement> meas )
 {
   m_livetime->setHidden( !meas );
   m_realtime->setHidden( !meas );
@@ -853,7 +851,7 @@ void MainWindow::setTimeText( std::shared_ptr<const Measurement> meas )
 
 
 void MainWindow::calculateTimeSeriesData(
-                            std::shared_ptr<Measurement> &grosscounts ) const
+                      std::shared_ptr<SpecUtils::Measurement> &grosscounts ) const
 {
   //for 'rslbig.n42' this function takes about 165 ms, so perhaps mutlithreading
   //  might be helpful?
@@ -881,18 +879,18 @@ void MainWindow::calculateTimeSeriesData(
   
   foreach( const int sample, sample_numbers )
   {
-    const vector< std::shared_ptr<const Measurement> > meas
+    const vector< std::shared_ptr<const SpecUtils::Measurement> > meas
                                   = m_measurment->sample_measurements( sample );
     
     if( meas.empty() )
       continue;
     
-    foreach( const std::shared_ptr<const Measurement> &m, meas )
+    foreach( const std::shared_ptr<const SpecUtils::Measurement> &m, meas )
     {
       if( !dets.count( m->detector_number() ) )
         continue;
       
-      if( m->source_type() == Measurement::Background )
+      if( m->source_type() == SpecUtils::SourceType::Background )
         continue;
       
       time += (m->real_time()/meas.size());
@@ -913,11 +911,10 @@ void MainWindow::calculateTimeSeriesData(
   else if( num_time_bins )
     bin_edges.push_back( bin_edges.back() + 1.0f );
   
-  grosscounts.reset( new Measurement() );
+  grosscounts = make_shared<SpecUtils::Measurement>();
 //  std::shared_ptr<Measurement> grosscounts( new Measurement() );
   
-  std::shared_ptr< vector<float> > times( new vector<float>(bin_edges) );
-  
+  auto times = make_shared<vector<float>>(bin_edges);
   const size_t ntimes = times->size();
   
   std::shared_ptr< vector<float> > gamma_counts( new vector<float>(ntimes) );
@@ -934,7 +931,7 @@ void MainWindow::calculateTimeSeriesData(
     
     int bin = static_cast<int>(pos - begin) + 1;  //XXX - I'm not totally sure of this
     
-    const vector< std::shared_ptr<const Measurement> > meas
+    const vector< std::shared_ptr<const SpecUtils::Measurement> > meas
                          = m_measurment->sample_measurements( sample_number );
     
     float num_gamma = 0.0f, num_nuteron = 0.0f, live_time = 0.0f;
@@ -968,7 +965,7 @@ void MainWindow::displayMeasurment()
 {
   if( !m_measurment )
   {
-    std::shared_ptr<Measurement> dummy;
+    std::shared_ptr<SpecUtils::Measurement> dummy;
     
     setTimeText( dummy );
     m_spectrum->setSpectrum( dummy, true, "" );
@@ -997,8 +994,7 @@ void MainWindow::displayMeasurment()
     
     m_sampleChanger->hide();
     
-    std::shared_ptr<Measurement> meas
-                   = m_measurment->sum_measurements( m_displayedSampleNumbers,
+    auto meas = m_measurment->sum_measurements( m_displayedSampleNumbers,
                                                      m_detectorsDisplayed );
     
     qDebug() << "NumNeutrons=" << meas->neutron_counts_sum() << endl;
@@ -1047,7 +1043,7 @@ void MainWindow::displayMeasurment()
     //Suprisingly, it doesnt save any time to call calculateTimeSeriesData(...)
     //  in another thread while setTimeText() and setSpectrum() are being
     //  called.
-    std::shared_ptr<Measurement> grosscounts;
+    std::shared_ptr<SpecUtils::Measurement> grosscounts;
     calculateTimeSeriesData( grosscounts );
     
     m_time->setGrossCounts( grosscounts );
@@ -1061,8 +1057,7 @@ void MainWindow::displayMeasurment()
     
     m_sampleChanger->hide();
     
-    std::shared_ptr<Measurement> meas
-              = m_measurment->sum_measurements( m_displayedSampleNumbers, m_detectorsDisplayed );
+    auto meas = m_measurment->sum_measurements( m_displayedSampleNumbers, m_detectorsDisplayed );
     
     string title = !!meas ? meas->title() : string("");
     if( title.empty() )
@@ -1087,8 +1082,7 @@ void MainWindow::displayMeasurment()
     
     m_displayedSampleNumbers.clear();
     m_displayedSampleNumbers.insert( *(m_measurment->sample_numbers().begin()) );
-    std::shared_ptr<Measurement> meas
-             = m_measurment->sum_measurements( m_displayedSampleNumbers, m_detectorsDisplayed );
+    auto meas = m_measurment->sum_measurements( m_displayedSampleNumbers, m_detectorsDisplayed );
     
     string title = !!meas ? meas->title() : string("");
     if( title.empty() )
@@ -1154,7 +1148,7 @@ void MainWindow::detectorsToDisplayChanged()
 }//void detectorsToDisplayChanged()
 
 
-void MainWindow::setMeasurment( std::shared_ptr<MeasurementInfo> measurment )
+void MainWindow::setMeasurment( std::shared_ptr<SpecUtils::SpecFile> measurment )
 {
   m_measurment = measurment;
 
@@ -1189,7 +1183,7 @@ void MainWindow::setMeasurment( std::shared_ptr<MeasurementInfo> measurment )
   }//if( is passthrough/searchmode ) / else
   
   displayMeasurment();
-}//void setMeasurment( std::shared_ptr<MeasurementInfo> measurment )
+}//void setMeasurment( std::shared_ptr<SpecUtils::SpecFile> measurment )
 
 
 
@@ -1218,8 +1212,8 @@ void MainWindow::handleSingleFileDrop( const QUrl &url )
     QCoreApplication::flush();
   }
   
-  std::shared_ptr<MeasurementInfo> info = std::make_shared<MeasurementInfo>();
-  const bool open = info->load_file( filename.toUtf8().data(), kAutoParser );
+  std::shared_ptr<SpecUtils::SpecFile> info = std::make_shared<SpecUtils::SpecFile>();
+  const bool open = info->load_file( filename.toUtf8().data(), SpecUtils::ParserType::Auto );
   
   if( indicator )
     delete indicator;

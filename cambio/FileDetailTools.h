@@ -36,7 +36,7 @@ class QPushButton;
 class QButtonGroup;
 class QDoubleSpinBox;
 
-class MeasurementInfo;
+namespace SpecUtils{ class SpecFile; }
 class FileDetailWidget;
 
 
@@ -109,14 +109,14 @@ public:
 public slots:
   void removeCal();
   
-  void updateDisplay( std::shared_ptr<MeasurementInfo> meas,
+  void updateDisplay( std::shared_ptr<SpecUtils::SpecFile> meas,
                                       std::set<int> samplenums,
                                       std::vector<bool> detectors );
 
 protected:
   virtual void closeEvent( QCloseEvent *event );
   
-  std::shared_ptr<MeasurementInfo> m_original;
+  std::shared_ptr<SpecUtils::SpecFile> m_original;
   
   QPushButton *m_remove_cal;
   

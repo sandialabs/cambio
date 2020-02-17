@@ -36,7 +36,7 @@ class QPushButton;
 class QDateTimeEdit;
 
 class Measurement;
-class MeasurementInfo;
+namespace SpecUtils{ class SpecFile; }
 class EnergyCalDialog;
 class CombineChannelsDialog;
 class TruncateChannelsDialog;
@@ -51,7 +51,7 @@ public:
   ~FileDetailWidget();
   
 public slots:
-  void updateDisplay( std::shared_ptr<MeasurementInfo> meas,
+  void updateDisplay( std::shared_ptr<SpecUtils::SpecFile> meas,
                       std::set<int> samplenums, std::vector<bool> detectors );
   void changeRecord( int record );
   void specTitleChanged();
@@ -80,14 +80,14 @@ public slots:
   void cropToChannels( int first_channel, int last_channel, const bool all );
 
   void createEnergyCalDialog();
-  void energyCalUpdated( std::shared_ptr<MeasurementInfo> meas );
+  void energyCalUpdated( std::shared_ptr<SpecUtils::SpecFile> meas );
 
 signals:
   void fileDataModified();
   void energyCalDialogCreated();
   
   ///Emited from inside updateDisplay(...) to propogate to energy cal dialog
-  void displayUpdated( std::shared_ptr<MeasurementInfo> meas,
+  void displayUpdated( std::shared_ptr<SpecUtils::SpecFile> meas,
                       std::set<int> samplenums, std::vector<bool> detectors );
 protected:
   QLineEdit *m_filename, *m_uuid, *m_inspection, *m_lane, *m_location;
@@ -107,8 +107,8 @@ protected:
   std::set<int> m_samplenums;
   std::vector<bool> m_detectors;
   
-  std::shared_ptr<const Measurement> m_meas;
-  std::shared_ptr<MeasurementInfo> m_measurment;
+  std::shared_ptr<const SpecUtils::Measurement> m_meas;
+  std::shared_ptr<SpecUtils::SpecFile> m_measurment;
   
   friend class EnergyCalDialog;
   friend class CombineChannelsDialog;

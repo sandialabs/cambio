@@ -57,26 +57,27 @@ using SpecUtils::convert_from_utf8_to_utf16;
 
 namespace
 {
-  const char *description( const SaveSpectrumAsType type )
+  const char *description( const SpecUtils::SaveSpectrumAsType type )
   {
+    using SpecUtils::SaveSpectrumAsType;
     switch( type )
     {
-      case kTxtSpectrumFile:                return "TXT";
-      case kCsvSpectrumFile:                return "CSV";
-      case kPcfSpectrumFile:                return "PCF";
-      case kXmlSpectrumFile:                return "N42 - 2006";
-      case k2012N42SpectrumFile:            return "N42 - 2012";
-      case kChnSpectrumFile:                return "CHN";
-      case kBinaryIntSpcSpectrumFile:       return "INT SPC";
-      case kBinaryFloatSpcSpectrumFile:     return "FLT SPC";
-      case kAsciiSpcSpectrumFile:           return "ASCII SPC";
-      case kExploraniumGr130v0SpectrumFile: return "GR130 DAT";
-      case kExploraniumGr135v2SpectrumFile: return "GR135 DAT";
-      case kIaeaSpeSpectrumFile:            return "IAEA SPE";
+      case SaveSpectrumAsType::Txt:                return "TXT";
+      case SaveSpectrumAsType::Csv:                return "CSV";
+      case SaveSpectrumAsType::Pcf:                return "PCF";
+      case SaveSpectrumAsType::N42_2006:           return "N42 - 2006";
+      case SaveSpectrumAsType::N42_2012:           return "N42 - 2012";
+      case SaveSpectrumAsType::Chn:                return "CHN";
+      case SaveSpectrumAsType::SpcBinaryInt:       return "INT SPC";
+      case SaveSpectrumAsType::SpcBinaryFloat:     return "FLT SPC";
+      case SaveSpectrumAsType::SpcAscii:           return "ASCII SPC";
+      case SaveSpectrumAsType::ExploraniumGr130v0: return "GR130 DAT";
+      case SaveSpectrumAsType::ExploraniumGr135v2: return "GR135 DAT";
+      case SaveSpectrumAsType::SpeIaea:            return "IAEA SPE";
 #if( SpecUtils_ENABLE_D3_CHART )
-      case kD3HtmlSpectrumFile:             return "HTML";
+      case SaveSpectrumAsType::HtmlD3:             return "HTML";
 #endif
-      case kNumSaveSpectrumAsType:          return "";
+      case SaveSpectrumAsType::NumTypes:           return "";
     }
     return "";
   }//const char *descriptionText( const SaveSpectrumAsType type )
@@ -177,15 +178,16 @@ BatchConvertDialog::BatchConvertDialog( QWidget * parent, Qt::WindowFlags f )
   QGridLayout *formatlayout = new QGridLayout;
   m_formatBox->setLayout( formatlayout );
   
-  for( SaveSpectrumAsType i = SaveSpectrumAsType(0);
-      i < kNumSaveSpectrumAsType; i = SaveSpectrumAsType(i+1) )
+  for( SpecUtils::SaveSpectrumAsType i = SpecUtils::SaveSpectrumAsType(0);
+      i < SpecUtils::SaveSpectrumAsType::NumTypes;
+      i = SpecUtils::SaveSpectrumAsType(static_cast<int>(i)+1) )
   {
     QRadioButton *radio = new QRadioButton( description(i) );
-    m_format->addButton( radio, i );
-    formatlayout->addWidget( radio, i, 0 );
+    m_format->addButton( radio, static_cast<int>(i) );
+    formatlayout->addWidget( radio, static_cast<int>(i), 0 );
   }//for(...)
   
-  m_format->button(k2012N42SpectrumFile)->setChecked( true );
+  m_format->button(static_cast<int>(SpecUtils::SaveSpectrumAsType::N42_2012))->setChecked( true );
   
   m_layout->addWidget( m_formatBox, 0, 1, Qt::AlignVCenter );
   
@@ -419,7 +421,7 @@ void BatchConvertDialog::convert()
   progress.setLabelText( "Converting Files..." );
   progress.setMaximum( static_cast<int>( selectedfiles.size() ) );
 
-  const SaveSpectrumAsType type = SaveSpectrumAsType(m_format->checkedId());
+  const SpecUtils::SaveSpectrumAsType type = SpecUtils::SaveSpectrumAsType(m_format->checkedId());
   
   bool overwriteall = false, skipexisting = false;
   
@@ -439,28 +441,29 @@ void BatchConvertDialog::convert()
       
     switch( type )
     {
-      case kTxtSpectrumFile:                out += ".txt"; break;
-      case kCsvSpectrumFile:                out += ".csv"; break;
-      case kPcfSpectrumFile:                out += ".pcf"; break;
-      case kXmlSpectrumFile:                out += ".n42"; break;
-      case k2012N42SpectrumFile:            out += ".n42"; break;
-      case kChnSpectrumFile:                out += ".chn"; break;
-      case kAsciiSpcSpectrumFile:           out += ".spc"; break;
-      case kExploraniumGr130v0SpectrumFile: out += ".dat"; break;
-      case kExploraniumGr135v2SpectrumFile: out += ".dat"; break;
-      case kIaeaSpeSpectrumFile:            out += ".dat"; break;
+      case SpecUtils::SaveSpectrumAsType::Txt:                out += ".txt"; break;
+      case SpecUtils::SaveSpectrumAsType::Csv:                out += ".csv"; break;
+      case SpecUtils::SaveSpectrumAsType::Pcf:                out += ".pcf"; break;
+      case SpecUtils::SaveSpectrumAsType::N42_2006:                out += ".n42"; break;
+      case SpecUtils::SaveSpectrumAsType::N42_2012:            out += ".n42"; break;
+      case SpecUtils::SaveSpectrumAsType::Chn:                out += ".chn"; break;
+      case SpecUtils::SaveSpectrumAsType::SpcAscii:           out += ".spc"; break;
+      case SpecUtils::SaveSpectrumAsType::ExploraniumGr130v0: out += ".dat"; break;
+      case SpecUtils::SaveSpectrumAsType::ExploraniumGr135v2: out += ".dat"; break;
+      case SpecUtils::SaveSpectrumAsType::SpeIaea:            out += ".dat"; break;
 #if( SpecUtils_ENABLE_D3_CHART )
-      case kD3HtmlSpectrumFile:             out += ".html"; break;
+      case SpecUtils::SaveSpectrumAsType::HtmlD3:             out += ".html"; break;
 #endif
-      case kBinaryIntSpcSpectrumFile: case kBinaryFloatSpcSpectrumFile:
+      case SpecUtils::SaveSpectrumAsType::SpcBinaryInt:
+      case SpecUtils::SaveSpectrumAsType::SpcBinaryFloat:
         out += ".spc"; break;
-      case kNumSaveSpectrumAsType: break;
+      case SpecUtils::SaveSpectrumAsType::NumTypes:           break;
     }//switch( type )
     
     outputInfo = QFileInfo( out );
 
-    MeasurementInfo meas;
-    const bool opened = meas.load_file( path.toUtf8().data(), kAutoParser );
+    SpecUtils::SpecFile meas;
+    const bool opened = meas.load_file( path.toUtf8().data(), SpecUtils::ParserType::Auto );
     
     if( !opened )
     {
@@ -503,9 +506,9 @@ void BatchConvertDialog::convert()
     const std::string outname = out.toUtf8().data();
     boost::scoped_ptr<std::ofstream> output;
     
-    if( type != kChnSpectrumFile
-        && type != kBinaryFloatSpcSpectrumFile
-        && type != kBinaryIntSpcSpectrumFile )
+    if( type != SpecUtils::SaveSpectrumAsType::Chn
+        && type != SpecUtils::SaveSpectrumAsType::SpcBinaryFloat
+        && type != SpecUtils::SaveSpectrumAsType::SpcBinaryInt )
     {
 #ifdef _WIN32
       output.reset( new std::ofstream( convert_from_utf8_to_utf16(outname).c_str(), std::ios::binary | std::ios::out ) );
@@ -525,41 +528,41 @@ void BatchConvertDialog::convert()
     bool ok = true;
     switch( type )
     {
-      case kTxtSpectrumFile:
+      case SpecUtils::SaveSpectrumAsType::Txt:
         ok = meas.write_txt( *output );
         break;
         
-      case kCsvSpectrumFile:
+      case SpecUtils::SaveSpectrumAsType::Csv:
         ok = meas.write_csv( *output );
         break;
         
-      case kPcfSpectrumFile:
+      case SpecUtils::SaveSpectrumAsType::Pcf:
         ok = meas.write_pcf( *output );
         break;
         
-      case kXmlSpectrumFile:
+      case SpecUtils::SaveSpectrumAsType::N42_2006:
         ok = meas.write_2006_N42( *output );
         break;
         
-      case k2012N42SpectrumFile:
+      case SpecUtils::SaveSpectrumAsType::N42_2012:
         ok = meas.write_2012_N42( *output );
         break;
         
-      case kExploraniumGr130v0SpectrumFile:
+      case SpecUtils::SaveSpectrumAsType::ExploraniumGr130v0:
         ok = meas.write_binary_exploranium_gr130v0( *output );
         break;
         
-      case kExploraniumGr135v2SpectrumFile:
+      case SpecUtils::SaveSpectrumAsType::ExploraniumGr135v2:
         ok = meas.write_binary_exploranium_gr135v2( *output );
         break;
         
-      case kChnSpectrumFile:
-      case kBinaryIntSpcSpectrumFile:
-      case kBinaryFloatSpcSpectrumFile:
-      case kAsciiSpcSpectrumFile:
-      case kIaeaSpeSpectrumFile:
+      case SpecUtils::SaveSpectrumAsType::Chn:
+      case SpecUtils::SaveSpectrumAsType::SpcBinaryInt:
+      case SpecUtils::SaveSpectrumAsType::SpcBinaryFloat:
+      case SpecUtils::SaveSpectrumAsType::SpcAscii:
+      case SpecUtils::SaveSpectrumAsType::SpeIaea:
 #if( SpecUtils_ENABLE_D3_CHART )
-      case kD3HtmlSpectrumFile:
+      case SpecUtils::SaveSpectrumAsType::HtmlD3:
 #endif
       {
         int nwroteone = 0;
@@ -604,18 +607,18 @@ void BatchConvertDialog::convert()
             }else
             {
               bool wrote = false;
-              if( type == kChnSpectrumFile )
+              if( type == SpecUtils::SaveSpectrumAsType::Chn )
                 wrote = meas.write_integer_chn( output, samplenumset, detnumset );
-              else if( type == kBinaryIntSpcSpectrumFile )
-                wrote = meas.write_binary_spc( output, MeasurementInfo::IntegerSpcType, samplenumset, detnumset );
-              else if( type == kBinaryFloatSpcSpectrumFile )
-                wrote = meas.write_binary_spc( output, MeasurementInfo::FloatSpcType, samplenumset, detnumset );
-              else if( type == kAsciiSpcSpectrumFile )
+              else if( type == SpecUtils::SaveSpectrumAsType::SpcBinaryInt )
+                wrote = meas.write_binary_spc( output, SpecUtils::SpecFile::IntegerSpcType, samplenumset, detnumset );
+              else if( type == SpecUtils::SaveSpectrumAsType::SpcBinaryFloat )
+                wrote = meas.write_binary_spc( output, SpecUtils::SpecFile::FloatSpcType, samplenumset, detnumset );
+              else if( type == SpecUtils::SaveSpectrumAsType::SpcAscii )
                 wrote = meas.write_ascii_spc( output, samplenumset, detnumset );
-              else if( type == kIaeaSpeSpectrumFile )
+              else if( type == SpecUtils::SaveSpectrumAsType::SpeIaea )
                 wrote = meas.write_iaea_spe( output, samplenumset, detnumset );
 #if( SpecUtils_ENABLE_D3_CHART )
-              else if( type == kD3HtmlSpectrumFile )
+              else if( type == SpecUtils::SaveSpectrumAsType::HtmlD3 )
                   wrote = meas.write_d3_html( output, D3SpectrumExport::D3SpectrumChartOptions{}, samplenumset, detnumset );
 #endif
               else
@@ -634,8 +637,8 @@ void BatchConvertDialog::convert()
         break;
       }//case kChnSpectrumFile, or SPC
         
-      case kNumSaveSpectrumAsType:
-        break;
+      case SpecUtils::SaveSpectrumAsType::NumTypes:
+                  break;
     }//switch( type )
     
     if( !ok )

@@ -345,7 +345,7 @@ void FileDetailWidget::changeRecord( int record )
   }//if( !valid )
   
   char buffer[128];
-  std::shared_ptr<const Measurement> meas = m_measurment->measurements()[record-1];
+  std::shared_ptr<const SpecUtils::Measurement> meas = m_measurment->measurements()[record-1];
   m_meas = meas;
   
   QDateTime startime;
@@ -687,7 +687,7 @@ void FileDetailWidget::posDateTimeChanged()
 
 
 
-void FileDetailWidget::updateDisplay( std::shared_ptr<MeasurementInfo> meas,
+void FileDetailWidget::updateDisplay( std::shared_ptr<SpecUtils::SpecFile> meas,
                                       std::set<int> samplenums,
                                       std::vector<bool> detectors )
 {
@@ -760,12 +760,12 @@ void FileDetailWidget::updateDisplay( std::shared_ptr<MeasurementInfo> meas,
   for( size_t i = 0; i < remarks.size(); ++i )
     m_fileComments->append( remarks[i].c_str() );
   
-  vector< std::shared_ptr<const Measurement> > m = m_measurment->measurements();
+  vector< std::shared_ptr<const SpecUtils::Measurement> > m = m_measurment->measurements();
   m_record->setRange( 1, static_cast<int>(m.size()) );
   
   if( samplenums.size() && detectors.size() )
   {
-    std::shared_ptr<const Measurement> record;
+    std::shared_ptr<const SpecUtils::Measurement> record;
     
     foreach( int sample, samplenums )
     {
@@ -790,7 +790,7 @@ void FileDetailWidget::updateDisplay( std::shared_ptr<MeasurementInfo> meas,
       changeRecord( 1 );
     }else
     {
-      vector< std::shared_ptr<const Measurement> >::const_iterator pos;
+      vector< std::shared_ptr<const SpecUtils::Measurement> >::const_iterator pos;
       pos = std::find( m.begin(), m.end(), record );
       if( pos == m.end() )
         changeRecord( 1 );
@@ -892,7 +892,7 @@ void FileDetailWidget::cropToChannels( int first, int last, const bool all )
 }//void cropToChannels( const int first_channel, const int last_channel )
 
 
-void FileDetailWidget::energyCalUpdated( std::shared_ptr<MeasurementInfo> meas )
+void FileDetailWidget::energyCalUpdated( std::shared_ptr<SpecUtils::SpecFile> meas )
 {
   if( meas != m_measurment )
   {
@@ -907,8 +907,8 @@ void FileDetailWidget::createEnergyCalDialog()
 {
   EnergyCalDialog *dialog = new EnergyCalDialog( this );
 
-  QObject::connect( this, SIGNAL(displayUpdated(std::shared_ptr<MeasurementInfo>,std::set<int>,std::vector<bool>)),
-                    dialog, SLOT(updateDisplay(std::shared_ptr<MeasurementInfo>,std::set<int>,std::vector<bool>)) );
+  QObject::connect( this, SIGNAL(displayUpdated(std::shared_ptr<SpecUtils::SpecFile>,std::set<int>,std::vector<bool>)),
+                    dialog, SLOT(updateDisplay(std::shared_ptr<SpecUtils::SpecFile>,std::set<int>,std::vector<bool>)) );
 
   emit energyCalDialogCreated();
 }//void createEnergyCalDialog()

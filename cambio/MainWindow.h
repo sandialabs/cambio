@@ -42,10 +42,10 @@ class TimeView;
 class SaveWidget;
 class SpectrumView;
 class BusyIndicator;
-class MeasurementInfo;
+namespace SpecUtils{ class SpecFile; }
+namespace SpecUtils{ class Measurement; }
 class FileDetailWidget;
 
-class Measurement;
 
 class MainWindow : public QMainWindow
 {
@@ -63,7 +63,7 @@ public:
   void handleMultipleFileDrop( const QList<QUrl> &urlist );
   
 public slots:
-  void setMeasurment( std::shared_ptr<MeasurementInfo> measurment );
+  void setMeasurment( std::shared_ptr<SpecUtils::SpecFile> measurment );
   
   void recievedDropEvent( QDropEvent *event );
   
@@ -96,7 +96,7 @@ public slots:
   void closeEvent( QCloseEvent *event );
   
 signals:
-  void displayedSpectrumChanged( std::shared_ptr<MeasurementInfo>,
+  void displayedSpectrumChanged( std::shared_ptr<SpecUtils::SpecFile>,
                                  std::set<int>,std::vector<bool> );
   
 protected:
@@ -110,12 +110,12 @@ protected:
   virtual void dropEvent( QDropEvent *event );
   
   void displayMeasurment();
-  void setTimeText( std::shared_ptr<const Measurement> meas );
+  void setTimeText( std::shared_ptr<const SpecUtils::Measurement> meas );
   
   //calculateTimeSeriesData(...): calculates the time series histogram for
   //  passthrough/search-mode data.  The passed in Measurement shared ptr will
   //  be reset to point at a new histogram
-  void calculateTimeSeriesData( std::shared_ptr<Measurement> &hist ) const;
+  void calculateTimeSeriesData( std::shared_ptr<SpecUtils::Measurement> &hist ) const;
   
   //updateForSampleNumChange(): sets stuff for m_currentSampleNum
   void updateForSampleNumChange();
@@ -148,7 +148,7 @@ protected:
   
   std::set<int> m_displayedSampleNumbers;
   std::vector<bool> m_detectorsDisplayed;
-  std::shared_ptr<MeasurementInfo> m_measurment;
+  std::shared_ptr<SpecUtils::SpecFile> m_measurment;
 };//class MainWindow
 
 #endif //MainWindow

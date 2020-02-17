@@ -429,7 +429,7 @@ void SpectrumView::setRebinFactor( const size_t factor )
 }//void setRebinFactor( const size_t factor )
 
 
-void SpectrumView::setSpectrum( std::shared_ptr<const Measurement> spec,
+void SpectrumView::setSpectrum( std::shared_ptr<const SpecUtils::Measurement> spec,
                                 const bool changeXRange,
                                 const char *title )
 {

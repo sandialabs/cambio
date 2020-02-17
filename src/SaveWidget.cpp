@@ -57,6 +57,8 @@
 
 
 using namespace std;
+using SpecUtils::SaveSpectrumAsType;
+
 
 namespace
 {
@@ -65,29 +67,29 @@ const char *description( const SaveSpectrumAsType type )
 {
   switch( type )
   {
-    case kTxtSpectrumFile:                return "TXT";
-    case kCsvSpectrumFile:                return "CSV";
-    case kPcfSpectrumFile:                return "PCF";
-    case kXmlSpectrumFile:                return "N42 - 2006";
-    case k2012N42SpectrumFile:            return "N42 - 2012";
-    case kChnSpectrumFile:                return "CHN";
-    case kBinaryIntSpcSpectrumFile:       return "SPC - Int";
-    case kBinaryFloatSpcSpectrumFile:     return "SPC - Real";
-    case kAsciiSpcSpectrumFile:           return "SPC - ASCII";
-    case kExploraniumGr130v0SpectrumFile: return "GR130 DAT";
-    case kExploraniumGr135v2SpectrumFile: return "GR135 DAT";
-    case kIaeaSpeSpectrumFile:            return "SPE IAEA";
+    case SaveSpectrumAsType::Txt:                   return "TXT";
+    case SaveSpectrumAsType::Csv:                   return "CSV";
+    case SaveSpectrumAsType::Pcf:                   return "PCF";
+    case SaveSpectrumAsType::N42_2006:              return "N42 - 2006";
+    case SaveSpectrumAsType::N42_2012:              return "N42 - 2012";
+    case SaveSpectrumAsType::Chn:                   return "CHN";
+    case SaveSpectrumAsType::SpcBinaryInt:          return "SPC - Int";
+    case SaveSpectrumAsType::SpcBinaryFloat:        return "SPC - Real";
+    case SaveSpectrumAsType::SpcAscii:              return "SPC - ASCII";
+    case SaveSpectrumAsType::ExploraniumGr130v0:    return "GR130 DAT";
+    case SaveSpectrumAsType::ExploraniumGr135v2:    return "GR135 DAT";
+    case SaveSpectrumAsType::SpeIaea:               return "SPE IAEA";
 #if( SpecUtils_ENABLE_D3_CHART )
-    case kD3HtmlSpectrumFile:             return "HTML";
+    case SaveSpectrumAsType::HtmlD3:                return "HTML";
 #endif
-    case kNumSaveSpectrumAsType:      return "";
+    case SaveSpectrumAsType::NumTypes: return "";
   }
   return "";
 }//const char *descriptionText( const SaveSpectrumAsType type )
 
 #if( SpecUtils_ENABLE_D3_CHART )
 bool writeIndividualHtmlSpectraToOutputFile( std::ofstream &output,
-                                              const MeasurementInfo &meas,
+                                              const SpecUtils::SpecFile &meas,
                                               const std::set<int> samplenums,
                                               std::vector<bool> detectors )
 {
@@ -126,7 +128,7 @@ bool writeIndividualHtmlSpectraToOutputFile( std::ofstream &output,
     if( !m )
       continue;
     
-    std::vector< std::pair<const Measurement *,D3SpectrumExport::D3SpectrumOptions> > measurements;
+    std::vector< std::pair<const SpecUtils::Measurement *,D3SpectrumExport::D3SpectrumOptions> > measurements;
     measurements.emplace_back( m.get(), D3SpectrumExport::D3SpectrumOptions{} );
     
     D3SpectrumExport::write_and_set_data_for_chart( output, div_id, measurements );
@@ -236,7 +238,7 @@ bool writeIndividualHtmlSpectraToOutputFile( std::ofstream &output,
 bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
                                    const QString initialDir,
                                    QString filename,
-                                   std::shared_ptr<MeasurementInfo> meas,
+                                   std::shared_ptr<SpecUtils::SpecFile> meas,
                                    const std::set<int> samplenums,
                                    std::vector<bool> detectors,
                                    const QString nameAppend )
@@ -307,16 +309,18 @@ bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
   
   switch( format )
   {
-    case kTxtSpectrumFile: case kCsvSpectrumFile:
-    case kPcfSpectrumFile: case kXmlSpectrumFile:
-    case k2012N42SpectrumFile:
-    case kExploraniumGr130v0SpectrumFile:
-    case kExploraniumGr135v2SpectrumFile:
+    case SaveSpectrumAsType::Txt:
+    case SaveSpectrumAsType::Csv:
+    case SaveSpectrumAsType::Pcf:
+    case SaveSpectrumAsType::N42_2006:
+    case SaveSpectrumAsType::N42_2012:
+    case SaveSpectrumAsType::ExploraniumGr130v0:
+    case SaveSpectrumAsType::ExploraniumGr135v2:
 #if( SpecUtils_ENABLE_D3_CHART )
-    case kD3HtmlSpectrumFile:
+    case SaveSpectrumAsType::HtmlD3:
 #endif
     {
-      std::shared_ptr<Measurement> m
+      std::shared_ptr<SpecUtils::Measurement> m
                               = meas->sum_measurements( samplenums, detectors );
       
       if( !m )
@@ -325,7 +329,7 @@ bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
         ok = false;
       }else
       {
-        MeasurementInfo info = *meas;
+        SpecUtils::SpecFile info = *meas;
         
         if( info.measurements().size() > 1 )
         {
@@ -335,16 +339,16 @@ bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
         
         switch( format )
         {
-          case kTxtSpectrumFile:     ok = info.write_txt( output );        break;
-          case kCsvSpectrumFile:     ok = info.write_csv( output );        break;
-          case kPcfSpectrumFile:     ok = info.write_pcf( output );        break;
-          case kXmlSpectrumFile:     ok = info.write_2006_N42( output );    break;
-          case k2012N42SpectrumFile: ok = info.write_2012_N42( output ); break;
-          case kExploraniumGr130v0SpectrumFile: ok = info.write_binary_exploranium_gr130v0( output ); break;
-          case kExploraniumGr135v2SpectrumFile: ok = info.write_binary_exploranium_gr135v2( output ); break;
+          case SaveSpectrumAsType::Txt:                ok = info.write_txt( output );      break;
+          case SaveSpectrumAsType::Csv:                ok = info.write_csv( output );      break;
+          case SaveSpectrumAsType::Pcf:                ok = info.write_pcf( output );      break;
+          case SaveSpectrumAsType::N42_2006:           ok = info.write_2006_N42( output ); break;
+          case SaveSpectrumAsType::N42_2012:           ok = info.write_2012_N42( output ); break;
+          case SaveSpectrumAsType::ExploraniumGr130v0: ok = info.write_binary_exploranium_gr130v0( output ); break;
+          case SaveSpectrumAsType::ExploraniumGr135v2: ok = info.write_binary_exploranium_gr135v2( output ); break;
           
 #if( SpecUtils_ENABLE_D3_CHART )
-          case kD3HtmlSpectrumFile:
+          case SaveSpectrumAsType::HtmlD3:
           {
             //If sample numbers are all sample numbers in the file, and there is one
             //  sample that is background, than that should be plotted seperately.
@@ -358,12 +362,12 @@ bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
           }
 #endif
             
-          case kChnSpectrumFile:
-          case kBinaryIntSpcSpectrumFile:
-          case kBinaryFloatSpcSpectrumFile:
-          case kNumSaveSpectrumAsType:
-          case kIaeaSpeSpectrumFile:
-          case kAsciiSpcSpectrumFile:
+          case SaveSpectrumAsType::Chn:
+          case SaveSpectrumAsType::SpcBinaryInt:
+          case SaveSpectrumAsType::SpcBinaryFloat:
+          case SaveSpectrumAsType::NumTypes:
+          case SaveSpectrumAsType::SpeIaea:
+          case SaveSpectrumAsType::SpcAscii:
             break;
         }//switch( type )
       }//if( !m ) / else
@@ -371,37 +375,37 @@ bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
       break;
     }//if( writing to a file that can handle multiple spectra )
       
-    case kChnSpectrumFile:
+    case SaveSpectrumAsType::Chn:
     {
       ok = meas->write_integer_chn( output, samplenums, detnums );
       break;
     }//case kChnSpectrumFile:
 
-    case kBinaryIntSpcSpectrumFile:
+    case SaveSpectrumAsType::SpcBinaryInt:
     {
-      ok = meas->write_binary_spc( output, MeasurementInfo::IntegerSpcType, samplenums, detnums );
+      ok = meas->write_binary_spc( output, SpecUtils::SpecFile::IntegerSpcType, samplenums, detnums );
       break;
     }
       
-    case kBinaryFloatSpcSpectrumFile:
+    case SaveSpectrumAsType::SpcBinaryFloat:
     {
-      ok = meas->write_binary_spc( output, MeasurementInfo::FloatSpcType, samplenums, detnums );
+      ok = meas->write_binary_spc( output, SpecUtils::SpecFile::FloatSpcType, samplenums, detnums );
       break;
     }
 
-    case kAsciiSpcSpectrumFile:
+    case SaveSpectrumAsType::SpcAscii:
     {
       ok = meas->write_ascii_spc( output, samplenums, detnums );
       break;
     }
       
-    case kIaeaSpeSpectrumFile:
+    case SaveSpectrumAsType::SpeIaea:
     {
       ok = meas->write_iaea_spe( output, samplenums, detnums );
       break;
     }
       
-    case kNumSaveSpectrumAsType:
+    case SaveSpectrumAsType::NumTypes:
       break;
   }//switch( format )
   
@@ -414,7 +418,7 @@ bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
 bool writeIndividualSpectraToOutputFile( const SaveSpectrumAsType format,
                                                     const QString initialDir,
                                                     const QString filename,
-                                                    std::shared_ptr<MeasurementInfo> meas,
+                                                    std::shared_ptr<SpecUtils::SpecFile> meas,
                                                     const std::set<int> samplenums,
                                                     std::vector<bool> detectors )
 {
@@ -448,12 +452,12 @@ bool writeIndividualSpectraToOutputFile( const SaveSpectrumAsType format,
   }//if( detectors.size() != meas->detector_numbers().size() )
   
   
-  //We'll write the file from a copy of the input MeasurementInfo, just in case
+  //We'll write the file from a copy of the input SpecUtils::SpecFile, just in case
   //  we dont want to write anything (note, we could refactor to only make a
-  //  copy of MeasurementInfo if necassarry, but to remain consistent, and since
+  //  copy of SpecUtils::SpecFile if necassarry, but to remain consistent, and since
   //  the copy should be much shorter time to make than the writing to disk, we
   //  will just always make the copy).
-  MeasurementInfo info = *meas;
+  SpecUtils::SpecFile info = *meas;
   
   bool alldets = (detectors.size()==meas->detector_numbers().size());
   for( const bool b : detectors )
@@ -466,16 +470,16 @@ bool writeIndividualSpectraToOutputFile( const SaveSpectrumAsType format,
       if( detectors[i] )
         dets.insert( meas->detector_numbers()[i] );
     
-    MeasurementInfo info = *meas;
-    vector<std::shared_ptr<const Measurement>> toremove;
-    foreach( std::shared_ptr<const Measurement> oldm, info.measurements() )
+    SpecUtils::SpecFile info = *meas;
+    vector<std::shared_ptr<const SpecUtils::Measurement>> toremove;
+    foreach( std::shared_ptr<const SpecUtils::Measurement> oldm, info.measurements() )
     {
       if( !samplenums.count(oldm->sample_number())
          || !dets.count(oldm->detector_number()) )
       {
         toremove.push_back( oldm );
       }
-    }//foreach( std::shared_ptr<const Measurement> oldm, info.measurements() )
+    }//foreach( std::shared_ptr<const SpecUtils::Measurement> oldm, info.measurements() )
     
     info.remove_measurments( toremove );
     
@@ -509,15 +513,15 @@ bool writeIndividualSpectraToOutputFile( const SaveSpectrumAsType format,
   
   switch( format )
   {
-    case kTxtSpectrumFile:                ok = info.write_txt( output );        break;
-    case kCsvSpectrumFile:                ok = info.write_csv( output );        break;
-    case kPcfSpectrumFile:                ok = info.write_pcf( output );        break;
-    case kXmlSpectrumFile:                ok = info.write_2006_N42( output );   break;
-    case k2012N42SpectrumFile:            ok = info.write_2012_N42( output );   break;
-    case kExploraniumGr130v0SpectrumFile: ok = info.write_binary_exploranium_gr130v0( output );   break;
-    case kExploraniumGr135v2SpectrumFile: ok = info.write_binary_exploranium_gr135v2( output );   break;
+    case SaveSpectrumAsType::Txt:                ok = info.write_txt( output );        break;
+    case SaveSpectrumAsType::Csv:                ok = info.write_csv( output );        break;
+    case SaveSpectrumAsType::Pcf:                ok = info.write_pcf( output );        break;
+    case SaveSpectrumAsType::N42_2006:           ok = info.write_2006_N42( output );   break;
+    case SaveSpectrumAsType::N42_2012:           ok = info.write_2012_N42( output );   break;
+    case SaveSpectrumAsType::ExploraniumGr130v0: ok = info.write_binary_exploranium_gr130v0( output );   break;
+    case SaveSpectrumAsType::ExploraniumGr135v2: ok = info.write_binary_exploranium_gr135v2( output );   break;
 #if( SpecUtils_ENABLE_D3_CHART )
-    case kD3HtmlSpectrumFile:
+    case SaveSpectrumAsType::HtmlD3:
     {
       if( samplenums.size() > 100 )
       {
@@ -543,25 +547,25 @@ bool writeIndividualSpectraToOutputFile( const SaveSpectrumAsType format,
     }
 #endif
       
-    case kChnSpectrumFile:
-    case kBinaryIntSpcSpectrumFile:
-    case kBinaryFloatSpcSpectrumFile:
-    case kAsciiSpcSpectrumFile:
-    case kIaeaSpeSpectrumFile:
+    case SaveSpectrumAsType::Chn:
+    case SaveSpectrumAsType::SpcBinaryInt:
+    case SaveSpectrumAsType::SpcBinaryFloat:
+    case SaveSpectrumAsType::SpcAscii:
+    case SaveSpectrumAsType::SpeIaea:
     {
       if( samplenums.size()==1 && detectors.size()==1 )
       {
         set<int> detnums;
         detnums.insert( info.detector_numbers()[0] );
-        if( format == kChnSpectrumFile )
+        if( format == SaveSpectrumAsType::Chn )
           ok = info.write_integer_chn( output, samplenums, detnums );
-        else if( format == kBinaryIntSpcSpectrumFile )
-          ok = info.write_binary_spc( output, MeasurementInfo::IntegerSpcType, samplenums, detnums );
-        else if( format == kBinaryFloatSpcSpectrumFile )
-          ok = info.write_binary_spc( output, MeasurementInfo::FloatSpcType, samplenums, detnums );
-        else if( format == kAsciiSpcSpectrumFile )
+        else if( format == SaveSpectrumAsType::SpcBinaryInt )
+          ok = info.write_binary_spc( output, SpecUtils::SpecFile::IntegerSpcType, samplenums, detnums );
+        else if( format == SaveSpectrumAsType::SpcBinaryFloat )
+          ok = info.write_binary_spc( output, SpecUtils::SpecFile::FloatSpcType, samplenums, detnums );
+        else if( format == SaveSpectrumAsType::SpcAscii )
           ok = info.write_ascii_spc( output, samplenums, detnums );
-        else if( format == kIaeaSpeSpectrumFile )
+        else if( format == SaveSpectrumAsType::SpeIaea )
           ok = info.write_iaea_spe( output, samplenums, detnums );
         else
           assert( 0 );
@@ -576,7 +580,7 @@ bool writeIndividualSpectraToOutputFile( const SaveSpectrumAsType format,
       break;
     }//case kChnSpectrumFile, kBinaryIntSpcSpectrumFile, kBinaryFloatSpcSpectrumFile:
       
-    case kNumSaveSpectrumAsType:
+    case SaveSpectrumAsType::NumTypes:
       break;
   }//switch( type )
   
@@ -804,8 +808,8 @@ SaveWidget::SaveWidget( QWidget *parent , Qt::WindowFlags f )
   
   qreal maxheight = 0.0, maxwidth = 0.0;
   for( SaveSpectrumAsType type = SaveSpectrumAsType(0);
-      type < kNumSaveSpectrumAsType;
-      type = SaveSpectrumAsType(type+1) )
+      type < SaveSpectrumAsType::NumTypes;
+      type = SaveSpectrumAsType(static_cast<int>(type)+1) )
   {
     QRectF bb = metric.boundingRect( description(type) );
     maxheight = std::max( maxheight, bb.height() );
@@ -815,8 +819,8 @@ SaveWidget::SaveWidget( QWidget *parent , Qt::WindowFlags f )
   QSize itemsize( static_cast<int>( ceil(maxwidth) ), 4 + static_cast<int>( ceil(maxheight) ) );
   
   for( SaveSpectrumAsType type = SaveSpectrumAsType(0);
-       type < kNumSaveSpectrumAsType;
-       type = SaveSpectrumAsType(type+1) )
+       type < SaveSpectrumAsType::NumTypes;
+       type = SaveSpectrumAsType(static_cast<int>(type)+1) )
   {
     QListWidgetItem *item = new QListWidgetItem( description(type) );
     item->setFont( serifFont );
@@ -836,7 +840,7 @@ SaveWidget::SaveWidget( QWidget *parent , Qt::WindowFlags f )
   
   QObject::connect( m_saveDirectory, SIGNAL(editingFinished()), this, SLOT(checkValidDirectory()) );
   
-  m_saveAsType->setCurrentRow( k2012N42SpectrumFile );
+  m_saveAsType->setCurrentRow( static_cast<int>(SaveSpectrumAsType::N42_2012) );
 }//SaveWidget constructior
 
 
@@ -874,7 +878,7 @@ void SaveWidget::save()
     return;
   }
   
-  if( row < 0 || row >= kNumSaveSpectrumAsType )
+  if( row < 0 || row >= static_cast<int>(SaveSpectrumAsType::NumTypes) )
   {
     QMessageBox msg;
     msg.setWindowTitle( "Error saving" );
@@ -882,7 +886,7 @@ void SaveWidget::save()
     msg.exec();
     
     return;
-  }//if( !!m_measurment || row < 0 || row >= kNumSaveSpectrumAsType )
+  }//if( !!m_measurment || row < 0 || row >= NumTypes )
   
   
   const QString initialDir = saveDirectory();
@@ -914,11 +918,11 @@ void SaveWidget::save()
   const SaveSpectrumAsType type = SaveSpectrumAsType(row);
   
   
-  if( type == kChnSpectrumFile
-      || type == kBinaryIntSpcSpectrumFile
-      || type == kBinaryFloatSpcSpectrumFile
-      || type == kAsciiSpcSpectrumFile
-      || type == kIaeaSpeSpectrumFile
+  if( type == SaveSpectrumAsType::Chn
+      || type == SaveSpectrumAsType::SpcBinaryInt
+      || type == SaveSpectrumAsType::SpcBinaryFloat
+      || type == SaveSpectrumAsType::SpcAscii
+      || type == SaveSpectrumAsType::SpeIaea
      )
   {
     const int id = m_saveToSingleSpecFileGroup->checkedId();
@@ -961,7 +965,7 @@ void SaveWidget::save()
         ok = true;
         int nwroteone = 1;
         
-        foreach( std::shared_ptr<const Measurement> meas, m_measurment->measurements() )
+        foreach( std::shared_ptr<const SpecUtils::Measurement> meas, m_measurment->measurements() )
         {
           if( !meas )
             continue;
@@ -991,7 +995,7 @@ void SaveWidget::save()
             ok = false;
             qDebug() << "Logic error finding detector number in SaveWidget::save()";
           }
-        }//foreach( std::shared_ptr<const Measurement> meas, m_measurment->measurements() )
+        }//foreach( std::shared_ptr<const SpecUtils::Measurement> meas, m_measurment->measurements() )
         
         break;
       }//case kEachSpectraInSeperateFile:
@@ -1078,7 +1082,7 @@ void SaveWidget::save()
             return;
         }//if( samplenums.size() > 20 )
         
-        foreach( std::shared_ptr<const Measurement> meas, m_measurment->measurements() )
+        foreach( std::shared_ptr<const SpecUtils::Measurement> meas, m_measurment->measurements() )
         {
           if( !meas )
             continue;
@@ -1108,32 +1112,32 @@ void SaveWidget::save()
             ok = false;
             qDebug() << "Logic error finding detector number in SaveWidget::save()";
           }
-        }//foreach( std::shared_ptr<const Measurement> meas, m_measurment->measurements() )
+        }//foreach( std::shared_ptr<const SpecUtils::Measurement> meas, m_measurment->measurements() )
 
         break;
       }//case kEachSpecToSeperateFile:
         
       case kSumDetectorsForeachSampleNumber:
       {
-        std::shared_ptr<MeasurementInfo> info( new MeasurementInfo(*m_measurment) );
+        auto info = std::make_shared<SpecUtils::SpecFile>( *m_measurment );
         
         const vector<bool> all_dets( m_measurment->detector_numbers().size(), true );
         const set<int> sample_nums = m_measurment->sample_numbers();
         
-        vector<std::shared_ptr<Measurement>> samplemeas;
+        vector<std::shared_ptr<SpecUtils::Measurement>> samplemeas;
         
         foreach( const int sample, sample_nums )
         {
           set<int> num;
           num.insert( sample );
-          std::shared_ptr<Measurement> m = m_measurment->sum_measurements( num, all_dets );
+          auto m = m_measurment->sum_measurements( num, all_dets );
           if( m )
             samplemeas.push_back( m );
         }//foreach( const int sample, sample_nums )
         
         info->remove_measurments( info->measurements() );
         
-        foreach( std::shared_ptr<Measurement> m, samplemeas )
+        for( auto m : samplemeas )
           info->add_measurment( m, false );
         info->cleanup_after_load(); //necassarry
         
@@ -1260,7 +1264,7 @@ void SaveWidget::browseForDirectory()
 void SaveWidget::formatChanged()
 {
   const int row = m_saveAsType->currentRow();
-  if( row < 0 || row >= kNumSaveSpectrumAsType )
+  if( row < 0 || row >= static_cast<int>(SaveSpectrumAsType::NumTypes) )
     return;
   
   SaveSpectrumAsType type = SaveSpectrumAsType(row);
@@ -1273,7 +1277,7 @@ void SaveWidget::formatChanged()
   
   switch( type )
   {
-    case kTxtSpectrumFile:
+    case SaveSpectrumAsType::Txt:
       if( currname.size() )
         currname += ".txt";
       m_saveToMultiSpecFile->show();
@@ -1304,7 +1308,7 @@ void SaveWidget::formatChanged()
              " spectrum file information";
     break;
       
-    case kCsvSpectrumFile:
+    case SaveSpectrumAsType::Csv:
       if( currname.size() )
         currname += ".csv";
       m_saveToMultiSpecFile->show();
@@ -1320,7 +1324,7 @@ void SaveWidget::formatChanged()
              " spectral information into other programs like Excel.\n";
     break;
       
-    case kPcfSpectrumFile:
+    case SaveSpectrumAsType::Pcf:
       if( currname.size() )
         currname += ".pcf";
       m_saveToMultiSpecFile->show();
@@ -1332,7 +1336,7 @@ void SaveWidget::formatChanged()
              " with the spectral information and neutron counts.";
     break;
       
-    case kXmlSpectrumFile:
+    case SaveSpectrumAsType::N42_2006:
       if( currname.size() )
         currname += ".n42";
       m_saveToMultiSpecFile->show();
@@ -1346,7 +1350,7 @@ void SaveWidget::formatChanged()
              " information.";
     break;
       
-    case k2012N42SpectrumFile:
+    case SaveSpectrumAsType::N42_2012:
       if( currname.size() )
         currname += ".n42";
       m_saveToMultiSpecFile->show();
@@ -1356,7 +1360,7 @@ void SaveWidget::formatChanged()
              " the output file.";
       break;
       
-    case kChnSpectrumFile:
+    case SaveSpectrumAsType::Chn:
       if( currname.size() )
         currname += ".chn";
       m_saveToMultiSpecFile->hide();
@@ -1372,7 +1376,7 @@ void SaveWidget::formatChanged()
              " is not preserved.";
       break;
       
-    case kBinaryIntSpcSpectrumFile:
+    case SaveSpectrumAsType::SpcBinaryInt:
       if( currname.size() )
         currname += ".spc";
       m_saveToMultiSpecFile->hide();
@@ -1387,7 +1391,7 @@ void SaveWidget::formatChanged()
              " results, and other meta information is not preserved.";
     break;
 
-    case kBinaryFloatSpcSpectrumFile:
+    case SaveSpectrumAsType::SpcBinaryFloat:
       if( currname.size() )
         currname += ".spc";
       m_saveToMultiSpecFile->hide();
@@ -1402,7 +1406,7 @@ void SaveWidget::formatChanged()
              " results, and other meta information is not preserved.";
       break;
     
-    case kAsciiSpcSpectrumFile:
+    case SaveSpectrumAsType::SpcAscii:
       if( currname.size() )
         currname += ".spc";
       m_saveToMultiSpecFile->hide();
@@ -1418,7 +1422,7 @@ void SaveWidget::formatChanged()
       " will be lost.";
       break;
       
-    case kExploraniumGr130v0SpectrumFile:
+    case SaveSpectrumAsType::ExploraniumGr130v0:
       if( currname.size() )
         currname += ".dat";
       m_saveToMultiSpecFile->show();
@@ -1432,7 +1436,7 @@ void SaveWidget::formatChanged()
              " records ordered by sample number then detector number.";
       break;
       
-    case kExploraniumGr135v2SpectrumFile:
+    case SaveSpectrumAsType::ExploraniumGr135v2:
       if( currname.size() )
         currname += ".dat";
       m_saveToMultiSpecFile->show();
@@ -1446,7 +1450,7 @@ void SaveWidget::formatChanged()
       " records ordered by sample number then detector number.";
       break;
       
-    case kIaeaSpeSpectrumFile:
+    case SaveSpectrumAsType::SpeIaea:
       if( currname.size() )
         currname += ".spe";
       m_saveToMultiSpecFile->hide();
@@ -1462,7 +1466,7 @@ void SaveWidget::formatChanged()
       break;
       
 #if( SpecUtils_ENABLE_D3_CHART )
-    case kD3HtmlSpectrumFile:
+    case SaveSpectrumAsType::HtmlD3:
       if( currname.size() )
         currname += ".html";
       m_saveToMultiSpecFile->show();
@@ -1476,7 +1480,7 @@ void SaveWidget::formatChanged()
       break;
 #endif
     
-    case kNumSaveSpectrumAsType:
+    case SaveSpectrumAsType::NumTypes:
       break;
   }//switch( type )
 
@@ -1569,7 +1573,7 @@ void SaveWidget::formatChanged()
 }//void formatChanged()
 
 
-void SaveWidget::updateDisplay( std::shared_ptr<MeasurementInfo> meas,
+void SaveWidget::updateDisplay( std::shared_ptr<SpecUtils::SpecFile> meas,
                                 std::set<int> samplenums,
                                 std::vector<bool> detectors )
 {

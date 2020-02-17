@@ -93,7 +93,7 @@ namespace {
   
 #if( WRITE_JSON_META_INFO )
   /** Output meta-information at the file level */
-  void add_file_meta_info_to_json( std::ostream &output, const MeasurementInfo &info )
+  void add_file_meta_info_to_json( std::ostream &output, const SpecUtils::SpecFile &info )
   {
     auto jsonEscape = []( string input ) -> string {
       SpecUtils::ireplace_all( input, "\"", "\\\"" );  //ToDo: Properly escape JSON strings!
@@ -135,7 +135,7 @@ namespace {
     //info.inspection()
     //info.measurement_location_name()
     //info.lane_number()
-    //const std::vector<std::string> &MeasurementInfo::detector_names() const
+    //const std::vector<std::string> &SpecUtils::SpecFile::detector_names() const
     output << ", TotalLiveTime: " << info.gamma_live_time();
     output << ", TotalRealTime: " << info.gamma_real_time();
     output << ", TotalSumGammas: " << info.gamma_count_sum();
@@ -196,7 +196,7 @@ namespace {
     }//if( ana )
 
     output << "},\n\t";
-  }//void add_file_meta_info_to_json( std::ostream &ostr, const MeasurementInfo &info )
+  }//void add_file_meta_info_to_json( std::ostream &ostr, const SpecUtils::SpecFile &info )
 #endif
 }
 #endif
@@ -253,7 +253,7 @@ namespace
    Note: This function is really a hack at the moment; there is room for much
          improvement.
    */
-  void normalize_det_name_to_n42( MeasurementInfo &info, const vector<string> &dont_change_det_names )
+  void normalize_det_name_to_n42( SpecUtils::SpecFile &info, const vector<string> &dont_change_det_names )
   {
     const bool print_debug = false;
     
@@ -463,7 +463,7 @@ namespace
         printf( "Didnt need to change det names: %s\n", notchanged.c_str() );
       }
     }//if( print_debug )
-  }//void normalize_det_name_to_n42( MeasurementInfo &info )
+  }//void normalize_det_name_to_n42( SpecUtils::SpecFile &info )
 }//namespace
 
 namespace CommandLineUtil
@@ -820,30 +820,30 @@ int run_command_util( const int argc, char *argv[] )
   
   
   //Map save to extension to save to types
-  map<string,SaveSpectrumAsType> str_to_save_type;
-  str_to_save_type["txt"]     = kTxtSpectrumFile;
-  str_to_save_type["csv"]     = kCsvSpectrumFile;
-  str_to_save_type["pcf"]     = kPcfSpectrumFile;
-  str_to_save_type["xml"]     = kXmlSpectrumFile;
-  str_to_save_type["n42"]     = k2012N42SpectrumFile;
-  str_to_save_type["2012n42"] = k2012N42SpectrumFile;
-  str_to_save_type["2006n42"] = kXmlSpectrumFile;
-  str_to_save_type["chn"]     = kChnSpectrumFile;
-  str_to_save_type["spc"]     = kBinaryIntSpcSpectrumFile;
-  str_to_save_type["intspc"]  = kBinaryIntSpcSpectrumFile;
-  str_to_save_type["fltspc"]  = kBinaryFloatSpcSpectrumFile;
+  map<string,SpecUtils::SaveSpectrumAsType> str_to_save_type;
+  str_to_save_type["txt"]     = SpecUtils::SaveSpectrumAsType::Txt;
+  str_to_save_type["csv"]     = SpecUtils::SaveSpectrumAsType::Csv;
+  str_to_save_type["pcf"]     = SpecUtils::SaveSpectrumAsType::Pcf;
+  str_to_save_type["xml"]     = SpecUtils::SaveSpectrumAsType::N42_2006;
+  str_to_save_type["n42"]     = SpecUtils::SaveSpectrumAsType::N42_2012;
+  str_to_save_type["2012n42"] = SpecUtils::SaveSpectrumAsType::N42_2012;
+  str_to_save_type["2006n42"] = SpecUtils::SaveSpectrumAsType::N42_2006;
+  str_to_save_type["chn"]     = SpecUtils::SaveSpectrumAsType::Chn;
+  str_to_save_type["spc"]     = SpecUtils::SaveSpectrumAsType::SpcBinaryInt;
+  str_to_save_type["intspc"]  = SpecUtils::SaveSpectrumAsType::SpcBinaryInt;
+  str_to_save_type["fltspc"]  = SpecUtils::SaveSpectrumAsType::SpcBinaryFloat;
   
-  str_to_save_type["asciispc"]  = kAsciiSpcSpectrumFile;
-  str_to_save_type["gr130"]     = kExploraniumGr130v0SpectrumFile;
-  str_to_save_type["gr135"]     = kExploraniumGr135v2SpectrumFile;
-  str_to_save_type["dat"]       = kExploraniumGr135v2SpectrumFile;
-  str_to_save_type["spe"]       = kIaeaSpeSpectrumFile;
+  str_to_save_type["asciispc"]  = SpecUtils::SaveSpectrumAsType::SpcAscii;
+  str_to_save_type["gr130"]     = SpecUtils::SaveSpectrumAsType::ExploraniumGr130v0;
+  str_to_save_type["gr135"]     = SpecUtils::SaveSpectrumAsType::ExploraniumGr135v2;
+  str_to_save_type["dat"]       = SpecUtils::SaveSpectrumAsType::ExploraniumGr135v2;
+  str_to_save_type["spe"]       = SpecUtils::SaveSpectrumAsType::SpeIaea;
 
 #if( SpecUtils_ENABLE_D3_CHART )
-  str_to_save_type["html"]       = kD3HtmlSpectrumFile;
-  str_to_save_type["json"]       = kD3HtmlSpectrumFile;
-  str_to_save_type["js"]         = kD3HtmlSpectrumFile;
-  str_to_save_type["css"]        = kD3HtmlSpectrumFile;
+  str_to_save_type["html"]       = SpecUtils::SaveSpectrumAsType::HtmlD3;
+  str_to_save_type["json"]       = SpecUtils::SaveSpectrumAsType::HtmlD3;
+  str_to_save_type["js"]         = SpecUtils::SaveSpectrumAsType::HtmlD3;
+  str_to_save_type["css"]        = SpecUtils::SaveSpectrumAsType::HtmlD3;
 #endif
 
   
@@ -970,7 +970,7 @@ int run_command_util( const int argc, char *argv[] )
            << " to specify.";
     
     cerr << "  Valid values are:\n\t";
-    for( map<string,SaveSpectrumAsType>::const_iterator i = str_to_save_type.begin();
+    for( map<string,SpecUtils::SaveSpectrumAsType>::const_iterator i = str_to_save_type.begin();
          i != str_to_save_type.end(); ++i )
       cerr << i->first << ", ";
     cerr << endl;
@@ -978,7 +978,7 @@ int run_command_util( const int argc, char *argv[] )
     return 4;
   }//if( user specified invalid type )
   
-  SaveSpectrumAsType format = str_to_save_type[outputformatstr];
+  SpecUtils::SaveSpectrumAsType format = str_to_save_type[outputformatstr];
   
   
   assert( num_OutputMetaInfoDetectorNames == NumOutputMetaInfoDetectorType );
@@ -1016,24 +1016,24 @@ int run_command_util( const int argc, char *argv[] )
     case DetectiveEX:    case DetectiveDX: case uDetective:
     case DetectiveEX100: case DetectiveDX100:
        if( outputformatstr == "spc" )
-         format = kBinaryIntSpcSpectrumFile;
+         format = SpecUtils::SaveSpectrumAsType::SpcBinaryInt;
     break;
       
     case GR130:
       if( outputformatstr == "dat" )
-        format = kExploraniumGr130v0SpectrumFile;
+        format = SpecUtils::SaveSpectrumAsType::ExploraniumGr130v0;
     break;
       
     case GR135:
       if( outputformatstr == "dat" )
-        format = kExploraniumGr135v2SpectrumFile;
+        format = SpecUtils::SaveSpectrumAsType::ExploraniumGr135v2;
       break;
       
     case identiFINDER1:
     case identiFINDERNG:
     case identiFINDERLaBr3:
       if( outputformatstr == "spc" )
-        format = kAsciiSpcSpectrumFile;
+        format = SpecUtils::SaveSpectrumAsType::SpcAscii;
       break;
       
     case NumOutputMetaInfoDetectorType:
@@ -1077,7 +1077,7 @@ int run_command_util( const int argc, char *argv[] )
   string ending = suggestedNameEnding( format );
   
  #if( SpecUtils_ENABLE_D3_CHART )
-  if( format == kD3HtmlSpectrumFile )
+  if( format == SpecUtils::SaveSpectrumAsType::HtmlD3 )
   {
     SpecUtils::to_lower_ascii( html_to_include );
     
@@ -1132,10 +1132,10 @@ int run_command_util( const int argc, char *argv[] )
         continue;
       }//if( input file didnt exist )
     
-      MeasurementInfo info;
+      SpecUtils::SpecFile info;
     
       const string inname = inputfiles[i];
-      const bool loaded = info.load_file( inname, kAutoParser, inname );
+      const bool loaded = info.load_file( inname, SpecUtils::ParserType::Auto, inname );
       if( !loaded )
       {
         cerr << "Failed to parse '" << inname << "'" << endl;
@@ -1212,16 +1212,16 @@ int run_command_util( const int argc, char *argv[] )
       
       const set<int> prefilter_samples = info.sample_numbers();
       
-      auto remove_type = [&info,inname,prefilter_samples]( Measurement::SourceType type ){
+      auto remove_type = [&info,inname,prefilter_samples]( SpecUtils::SourceType type ){
         int nremoved = 0;
-        vector<shared_ptr<const Measurement>> meass = info.measurements();
-        for( shared_ptr<const Measurement> &m : meass )
+        vector<shared_ptr<const SpecUtils::Measurement>> meass = info.measurements();
+        for( shared_ptr<const SpecUtils::Measurement> &m : meass )
         {
-          Measurement::SourceType record_type = m->source_type();
+          SpecUtils::SourceType record_type = m->source_type();
           
-          if( record_type == Measurement::SourceType::UnknownSourceType
+          if( record_type == SpecUtils::SourceType::Unknown
              && prefilter_samples.size()==1 )
-            record_type = Measurement::SourceType::Foreground;
+            record_type = SpecUtils::SourceType::Foreground;
           
           if( record_type == type )
           {
@@ -1243,28 +1243,28 @@ int run_command_util( const int argc, char *argv[] )
       };//remove_type(...)
       
       if( no_background_spec )
-        remove_type( Measurement::SourceType::Background );
+        remove_type( SpecUtils::SourceType::Background );
       
       if( no_foreground_spec )
-        remove_type( Measurement::SourceType::Foreground );
+        remove_type( SpecUtils::SourceType::Foreground );
       
       if( no_intrinsic_spec )
-        remove_type( Measurement::SourceType::IntrinsicActivity );
+        remove_type( SpecUtils::SourceType::IntrinsicActivity );
       
       if( no_calibration_spec )
-        remove_type( Measurement::SourceType::Calibration );
+        remove_type( SpecUtils::SourceType::Calibration );
       
       if( no_unknown_spec )
-        remove_type( Measurement::SourceType::UnknownSourceType );
+        remove_type( SpecUtils::SourceType::Unknown );
       
       if( sum_all_spectra )
       {
         const set<int> sample_num = info.sample_numbers();
         const std::vector<int> det_nums = info.detector_numbers();
         const vector<bool> det_to_use( det_nums.size(), true );
-        std::shared_ptr<Measurement> summed_meas = info.sum_measurements( sample_num, det_to_use);
-        vector<shared_ptr<const Measurement>> meass = info.measurements();
-        for( shared_ptr<const Measurement> &m : meass )
+        std::shared_ptr<SpecUtils::Measurement> summed_meas = info.sum_measurements( sample_num, det_to_use);
+        vector<shared_ptr<const SpecUtils::Measurement>> meass = info.measurements();
+        for( shared_ptr<const SpecUtils::Measurement> &m : meass )
           info.remove_measurment( m, false );
         info.add_measurment( summed_meas, true );
         try
@@ -1354,7 +1354,7 @@ int run_command_util( const int argc, char *argv[] )
         
         const string reldir = SpecUtils::fs_relative( inputdir, SpecUtils::parent_path(inputfiles[i]) );
         
-        //ToDo: implement something like UtilityFunctions:recursive_create_directory(...)
+        //ToDo: implement something like SpecUtils:recursive_create_directory(...)
         //      rather than this huge hack to recursively make directories.
         
         string tmpdirstr = reldir;
@@ -1399,7 +1399,7 @@ int run_command_util( const int argc, char *argv[] )
         continue;
       }
     
-      vector< std::shared_ptr<const Measurement> > meass = info.measurements();
+      vector< std::shared_ptr<const SpecUtils::Measurement> > meass = info.measurements();
       
       
       
@@ -1414,39 +1414,39 @@ int run_command_util( const int argc, char *argv[] )
             if( !meass[i]->contained_neutron() )
               info.set_contained_neutrons( true, 0.0, meass[i] );
 
-          if( info.detector_type() == kDetectiveExDetector )
+          if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx )
             break;
           
           info.set_instrument_id( "240 Detective-EX" );
           info.set_manufacturer( "ORTEC" );
           info.set_instrument_model( "DetectiveEX" );
           info.set_instrument_type( "RadionuclideIdentifier" );
-          info.set_detector_type( kDetectiveExDetector );
+          info.set_detector_type( SpecUtils::DetectorType::DetectiveEx );
         break;
           
         case DetectiveDX:
           for( size_t i = 0; i < meass.size(); ++i )
             info.set_contained_neutrons( false, 0.0f, meass[i] );
           
-          if( info.detector_type() == kDetectiveExDetector )
+          if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx )
             break;
           
           info.set_instrument_id( "240 Detective-DX" );
           info.set_manufacturer( "ORTEC" );
           info.set_instrument_model( "DetectiveDX" );
           info.set_instrument_type( "RadionuclideIdentifier" );
-          info.set_detector_type( kDetectiveExDetector );
+          info.set_detector_type( SpecUtils::DetectorType::DetectiveEx );
         break;
           
         case uDetective:
-          if( info.detector_type() == kMicroDetectiveDetector )
+          if( info.detector_type() == SpecUtils::DetectorType::MicroDetective )
             break;
           
           info.set_instrument_id( "7258 MicroDetective" );
           info.set_manufacturer( "ORTEC" );
           info.set_instrument_model( "MicroDetective" );
           info.set_instrument_type( "RadionuclideIdentifier" );
-          info.set_detector_type( kDetectiveExDetector );
+          info.set_detector_type( SpecUtils::DetectorType::DetectiveEx );
         break;
           
         case DetectiveEX100:
@@ -1454,28 +1454,28 @@ int run_command_util( const int argc, char *argv[] )
             if( !meass[i]->contained_neutron() )
               info.set_contained_neutrons( true, 0.0, meass[i] );
 
-          if( info.detector_type() == kDetectiveEx100Detector )
+          if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx100 )
             break;
           
           info.set_instrument_id( "7000 Detective-EX100" );
           info.set_manufacturer( "ORTEC" );
           info.set_instrument_model( "DetectiveEX100" );
           info.set_instrument_type( "RadionuclideIdentifier" );
-          info.set_detector_type( kDetectiveEx100Detector );
+          info.set_detector_type( SpecUtils::DetectorType::DetectiveEx100 );
           break;
           
         case DetectiveDX100:
           for( size_t i = 0; i < meass.size(); ++i )
             info.set_contained_neutrons( false, 0.0f, meass[i] );
           
-          if( info.detector_type() == kDetectiveEx100Detector )
+          if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx100 )
             break;
           
           info.set_instrument_id( "7000 Detective-DX100" );
           info.set_manufacturer( "ORTEC" );
           info.set_instrument_model( "DetectiveDX100" );
           info.set_instrument_type( "RadionuclideIdentifier" );
-          info.set_detector_type( kDetectiveEx100Detector );
+          info.set_detector_type( SpecUtils::DetectorType::DetectiveEx100 );
         break;
           
         case GR130:
@@ -1487,7 +1487,7 @@ int run_command_util( const int argc, char *argv[] )
         case identiFINDER1:
           info.set_manufacturer( "FLIR" );
           info.set_instrument_model( "identiFINDER" );
-          info.set_detector_type( kIdentiFinderDetector );
+          info.set_detector_type( SpecUtils::DetectorType::IdentiFinder );
           info.set_instrument_type( "RadionuclideIdentifier" );
           break;
           
@@ -1498,7 +1498,7 @@ int run_command_util( const int argc, char *argv[] )
             info.set_instrument_model( "identiFINDER 2 NG" );
           info.set_manufacturer( "FLIR" );
           info.set_instrument_type( "RadionuclideIdentifier" );
-          info.set_detector_type( kIdentiFinderNGDetector );
+          info.set_detector_type( SpecUtils::DetectorType::IdentiFinderNG );
           break;
           
         case identiFINDERLaBr3:
@@ -1508,7 +1508,7 @@ int run_command_util( const int argc, char *argv[] )
             info.set_instrument_model( "identiFINDER 2 LG" );
           info.set_manufacturer( "FLIR" );
           info.set_instrument_type( "RadionuclideIdentifier" );
-          info.set_detector_type( kIdentiFinderLaBr3Detector );
+          info.set_detector_type( SpecUtils::DetectorType::IdentiFinderLaBr3 );
           break;
           
         case NumOutputMetaInfoDetectorType:
@@ -1529,14 +1529,14 @@ int run_command_util( const int argc, char *argv[] )
       }//if( we filteres out all the measuremnts )
       
       
-      if( format == kChnSpectrumFile
-          || format == kBinaryIntSpcSpectrumFile
-          || format == kBinaryFloatSpcSpectrumFile
-          || format == kAsciiSpcSpectrumFile
-          || format == kIaeaSpeSpectrumFile
+      if( format == SpecUtils::SaveSpectrumAsType::Chn
+          || format == SpecUtils::SaveSpectrumAsType::SpcBinaryInt
+          || format == SpecUtils::SaveSpectrumAsType::SpcBinaryFloat
+          || format == SpecUtils::SaveSpectrumAsType::SpcAscii
+          || format == SpecUtils::SaveSpectrumAsType::SpeIaea
          )
       {
-        const vector< std::shared_ptr<const Measurement> > meass = info.measurements();
+        const vector< std::shared_ptr<const SpecUtils::Measurement> > meass = info.measurements();
         const std::set<int> samplenums = info.sample_numbers();
         const std::vector<int> detnums = info.detector_numbers();
       
@@ -1568,15 +1568,15 @@ int run_command_util( const int argc, char *argv[] )
           for( size_t i = 0; i < detnums.size(); ++i )
             detnumset.insert( detnums[i] );
         
-          if( format == kChnSpectrumFile )
+          if( format == SpecUtils::SaveSpectrumAsType::Chn )
             wrote = info.write_integer_chn( output, samplenums, detnumset );
-          else if( format == kBinaryIntSpcSpectrumFile )
-            wrote = info.write_binary_spc( output, MeasurementInfo::IntegerSpcType, samplenums, detnumset );
-          else if( format == kBinaryFloatSpcSpectrumFile )
-            wrote = info.write_binary_spc( output, MeasurementInfo::FloatSpcType, samplenums, detnumset );
-          else if( format == kAsciiSpcSpectrumFile )
+          else if( format == SpecUtils::SaveSpectrumAsType::SpcBinaryInt )
+            wrote = info.write_binary_spc( output, SpecUtils::SpecFile::IntegerSpcType, samplenums, detnumset );
+          else if( format == SpecUtils::SaveSpectrumAsType::SpcBinaryFloat )
+            wrote = info.write_binary_spc( output, SpecUtils::SpecFile::FloatSpcType, samplenums, detnumset );
+          else if( format == SpecUtils::SaveSpectrumAsType::SpcAscii )
             wrote = info.write_ascii_spc( output, samplenums, detnumset );
-          else if( format == kIaeaSpeSpectrumFile )
+          else if( format == SpecUtils::SaveSpectrumAsType::SpeIaea )
             wrote = info.write_iaea_spe( output, samplenums, detnumset );
           else
           {
@@ -1652,15 +1652,15 @@ int run_command_util( const int argc, char *argv[] )
               }else
               {
                 bool wrote;
-                if( format == kChnSpectrumFile )
+                if( format == SpecUtils::SaveSpectrumAsType::Chn )
                   wrote = info.write_integer_chn( output, samplenumset, detnumset );
-                else if( format == kBinaryIntSpcSpectrumFile )
-                  wrote = info.write_binary_spc( output, MeasurementInfo::IntegerSpcType, samplenumset, detnumset );
-                else if( format == kBinaryFloatSpcSpectrumFile )
-                  wrote = info.write_binary_spc( output, MeasurementInfo::FloatSpcType, samplenumset, detnumset );
-                else if( format == kAsciiSpcSpectrumFile )
+                else if( format == SpecUtils::SaveSpectrumAsType::SpcBinaryInt )
+                  wrote = info.write_binary_spc( output, SpecUtils::SpecFile::IntegerSpcType, samplenumset, detnumset );
+                else if( format == SpecUtils::SaveSpectrumAsType::SpcBinaryFloat )
+                  wrote = info.write_binary_spc( output, SpecUtils::SpecFile::FloatSpcType, samplenumset, detnumset );
+                else if( format == SpecUtils::SaveSpectrumAsType::SpcAscii )
                   wrote = info.write_ascii_spc( output, samplenums, detnumset );
-                else if( format == kIaeaSpeSpectrumFile )
+                else if( format == SpecUtils::SaveSpectrumAsType::SpeIaea )
                   wrote = info.write_iaea_spe( output, samplenums, detnumset );
                 else
                   assert( 0 );
@@ -1706,38 +1706,38 @@ int run_command_util( const int argc, char *argv[] )
         bool wrote = false;
         switch( format )
         {
-          case kTxtSpectrumFile:
+          case SpecUtils::SaveSpectrumAsType::Txt:
             wrote = info.write_txt( output );
           break;
           
-          case kCsvSpectrumFile:
+          case SpecUtils::SaveSpectrumAsType::Csv:
             wrote = info.write_csv( output );
           break;
           
-          case kPcfSpectrumFile:
+          case SpecUtils::SaveSpectrumAsType::Pcf:
             wrote = info.write_pcf( output );
           break;
           
-          case kXmlSpectrumFile:
+          case SpecUtils::SaveSpectrumAsType::N42_2006:
             wrote = info.write_2006_N42( output );
           break;
           
-          case k2012N42SpectrumFile:
+          case SpecUtils::SaveSpectrumAsType::N42_2012:
             wrote = info.write_2012_N42( output );
           break;
           
-          case kExploraniumGr130v0SpectrumFile:
+          case SpecUtils::SaveSpectrumAsType::ExploraniumGr130v0:
             wrote = info.write_binary_exploranium_gr130v0( output );
           break;
             
-          case kExploraniumGr135v2SpectrumFile:
+          case SpecUtils::SaveSpectrumAsType::ExploraniumGr135v2:
             wrote = info.write_binary_exploranium_gr135v2( output );
           break;
             
 #if( SpecUtils_ENABLE_D3_CHART )
-          case kD3HtmlSpectrumFile:
+          case SpecUtils::SaveSpectrumAsType::HtmlD3:
           {
-            const vector<std::shared_ptr<const Measurement> > measurements = info.measurements();
+            const vector<std::shared_ptr<const SpecUtils::Measurement> > measurements = info.measurements();
             
             //Should probably look to see if this is an obvious case where we
             //  should show the foreground/background on the same chart.
@@ -1871,7 +1871,7 @@ int run_command_util( const int argc, char *argv[] )
               
               for( size_t i = 0; i < measurements.size(); ++i )
               {
-                std::shared_ptr<const Measurement> m = measurements[i];
+                std::shared_ptr<const SpecUtils::Measurement> m = measurements[i];
                 const string div_id = "chart" + std::to_string(i);
                 
                 fileopts.m_dataTitle = m->title();
@@ -1882,8 +1882,8 @@ int run_command_util( const int argc, char *argv[] )
                   fileopts.m_dataTitle += "Sample " + to_string(m->sample_number());
                 }
               
-                vector< pair<const Measurement *,D3SpectrumOptions> > htmlinput;
-                htmlinput.push_back( std::pair<const Measurement *,D3SpectrumOptions>(m.get(),specopts) );
+                vector< pair<const SpecUtils::Measurement *,D3SpectrumOptions> > htmlinput;
+                htmlinput.push_back( std::pair<const SpecUtils::Measurement *,D3SpectrumOptions>(m.get(),specopts) );
                 
                 output << "<div id=\"" << div_id << "\" class=\"chart\" oncontextmenu=\"return false;\";></div>" << endline;  // Adding the main chart div
                 
@@ -1913,12 +1913,12 @@ int run_command_util( const int argc, char *argv[] )
           }
 #endif  //#if( SpecUtils_ENABLE_D3_CHART )
             
-          case kChnSpectrumFile:
-          case kBinaryIntSpcSpectrumFile:
-          case kBinaryFloatSpcSpectrumFile:
-          case kNumSaveSpectrumAsType:
-          case kIaeaSpeSpectrumFile:
-          case kAsciiSpcSpectrumFile:
+          case SpecUtils::SaveSpectrumAsType::Chn:
+          case SpecUtils::SaveSpectrumAsType::SpcBinaryInt:
+          case SpecUtils::SaveSpectrumAsType::SpcBinaryFloat:
+          case SpecUtils::SaveSpectrumAsType::NumTypes:
+          case SpecUtils::SaveSpectrumAsType::SpeIaea:
+          case SpecUtils::SaveSpectrumAsType::SpcAscii:
             assert( 0 );
           break;
         }//switch( format )

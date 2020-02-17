@@ -77,7 +77,7 @@ public:
   
   virtual void paintEvent( QPaintEvent *event );
   
-  void setSpectrum( std::shared_ptr<const Measurement> spec,
+  void setSpectrum( std::shared_ptr<const SpecUtils::Measurement> spec,
                     const bool changeXRange,
                     const char *title = nullptr );
 
@@ -166,7 +166,7 @@ private:
   
   Q_DISABLE_COPY(SpectrumView)
   
-  std::shared_ptr<const Measurement> m_spectrum;
+  std::shared_ptr<const SpecUtils::Measurement> m_spectrum;
   
 #if( KEEP_TOUCH_EVENTS_FROM_BUILDING_UP )
   bool m_updatingGesture;

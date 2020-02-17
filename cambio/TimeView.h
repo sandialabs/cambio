@@ -43,9 +43,8 @@ QT_CHARTS_BEGIN_NAMESPACE
   class QAbstractAxis;
 QT_CHARTS_END_NAMESPACE
 
-
-class Measurement;
-class MeasurementInfo;
+namespace SpecUtils{ class SpecFile; }
+namespace SpecUtils{ class Measurement; }
 
 class TimeView : public QGraphicsView
 {
@@ -55,13 +54,13 @@ public:
   explicit TimeView( QWidget *parent = nullptr );
   ~TimeView();
   
-  void setGrossCounts( std::shared_ptr<const Measurement> grossCounts );
+  void setGrossCounts( std::shared_ptr<const SpecUtils::Measurement> grossCounts );
   
 public slots:
   void xRangeChanged( qreal xmin, qreal xmax );
   void yRangeChanged( qreal xmin, qreal xmax );
   
-  void spectrumSampleNumbersChanged( std::shared_ptr<MeasurementInfo> meas,
+  void spectrumSampleNumbersChanged( std::shared_ptr<SpecUtils::SpecFile> meas,
                                      std::set<int> samplenums,
                                      std::vector<bool> detectors );
 
@@ -131,7 +130,7 @@ private:
   std::vector< std::pair<float,float> > m_highlightedRanges;
   
   size_t m_rebinFactor;
-  std::shared_ptr<const Measurement> m_grossCounts;
+  std::shared_ptr<const SpecUtils::Measurement> m_grossCounts;
   
   Q_DISABLE_COPY(TimeView)
   

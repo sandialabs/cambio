@@ -159,7 +159,7 @@ TimeView::TimeView( QWidget *parent )
 
 
 
-void TimeView::spectrumSampleNumbersChanged( std::shared_ptr<MeasurementInfo> meas,
+void TimeView::spectrumSampleNumbersChanged( std::shared_ptr<SpecUtils::SpecFile> meas,
                           std::set<int> samplenums,
                           std::vector<bool> detectors )
 {
@@ -203,7 +203,7 @@ void TimeView::spectrumSampleNumbersChanged( std::shared_ptr<MeasurementInfo> me
 }//void spectrumSampleNumbersChanged(...)
 
 
-void TimeView::setGrossCounts( std::shared_ptr<const Measurement> counts )
+void TimeView::setGrossCounts( std::shared_ptr<const SpecUtils::Measurement> counts )
 {
   m_highlightedRanges.clear();
   m_grossCounts = counts;
@@ -214,7 +214,7 @@ void TimeView::setGrossCounts( std::shared_ptr<const Measurement> counts )
 
 void TimeView::updateSeries()
 {
-  std::shared_ptr<const Measurement> counts = m_grossCounts;
+  std::shared_ptr<const SpecUtils::Measurement> counts = m_grossCounts;
   
   const bool validGamma = (!!counts && !!counts->gamma_counts()
                             && counts->gamma_counts()->size() > 3);

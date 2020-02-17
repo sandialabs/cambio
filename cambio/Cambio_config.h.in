@@ -26,4 +26,5 @@
 #cmakedefine01 SHOW_CAMBIO_SPLASH_SCREEN
 #cmakedefine Cambio_VERSION "@Cambio_VERSION@"
 
+
 #endif // Cambio_config_h
