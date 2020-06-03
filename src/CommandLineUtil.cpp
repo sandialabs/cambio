@@ -121,8 +121,8 @@ namespace {
       output << "]";
     }
     
-    if( !info.measurment_operator().empty() )
-      output << ", Operator: \"" << jsonEscape( info.measurment_operator() ) << "\"";
+    if( !info.measurement_operator().empty() )
+      output << ", Operator: \"" << jsonEscape( info.measurement_operator() ) << "\"";
     
     output << ", NumberMeasurements: " << info.num_measurements();
     
@@ -1226,7 +1226,7 @@ int run_command_util( const int argc, char *argv[] )
           if( record_type == type )
           {
             ++nremoved;
-            info.remove_measurment( m, false );
+            info.remove_measurement( m, false );
           }
         }//for( loop over measurements )
         
@@ -1265,8 +1265,8 @@ int run_command_util( const int argc, char *argv[] )
         std::shared_ptr<SpecUtils::Measurement> summed_meas = info.sum_measurements( sample_num, det_to_use);
         vector<shared_ptr<const SpecUtils::Measurement>> meass = info.measurements();
         for( shared_ptr<const SpecUtils::Measurement> &m : meass )
-          info.remove_measurment( m, false );
-        info.add_measurment( summed_meas, true );
+          info.remove_measurement( m, false );
+        info.add_measurement( summed_meas, true );
         try
         {
           info.cleanup_after_load();
@@ -1591,7 +1591,7 @@ int run_command_util( const int argc, char *argv[] )
           {
             cout << "Saved '" << saveto << "'" << endl;
           }
-        }else  //if( sum all measurments )
+        }else  //if( sum all measurements )
         {
           int nwroteone = 0;
       
