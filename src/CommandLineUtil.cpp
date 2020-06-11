@@ -514,6 +514,8 @@ int run_command_util( const int argc, char *argv[] )
   
   string newserialnum, newdettype;
   
+  string template_file;
+
   po::options_description cl_desc("Allowed options");
   cl_desc.add_options()
     ("help,h",  "produce this help message")
@@ -533,7 +535,7 @@ int run_command_util( const int argc, char *argv[] )
               " N42 (defaults to 2012 variant), 2012N42, 2006N42,"
               " CHN (binary integer variant), SPC (defaults to int variant),"
               " INTSPC, FLTSPC, SPE (IAEA format), asciispc (ASCII version of"
-              " SPC), gr130 (256 channel binary format)"
+              " SPC), gr130 (256 channel binary format), template (Templated text file)"
 #if( SpecUtils_ENABLE_D3_CHART )
               ", html (webpage plot), json (chart data in json format, equiv to '--format=html --html-output=json')"
 #endif
@@ -546,6 +548,9 @@ int run_command_util( const int argc, char *argv[] )
      "Fielsystem path of INI file were some or all command line options are"
      " specified. Options specified on the command line are combined with"
      " options given in the INI file.  Most options can only be specified once."
+    )
+    ("template-file", po::value<string>(&template_file),
+        "Filesystem path of the template file to use."
     )
     ("inputdir", po::value<string>(&inputdir),
      "Input directory.  All files in specified directory will (try to) be"
@@ -846,6 +851,8 @@ int run_command_util( const int argc, char *argv[] )
   str_to_save_type["css"]        = SpecUtils::SaveSpectrumAsType::HtmlD3;
 #endif
 
+  str_to_save_type["template"] = SpecUtils::SaveSpectrumAsType::Template;
+
   
   //spec_exts: extensions of files that we can read.
   const string spec_exts[] = { "txt", "csv", "pcf", "xml", "n42", "chn", "spc", "dat", "cnf", "spe", "js", "json", "html", "css" };
@@ -980,6 +987,11 @@ int run_command_util( const int argc, char *argv[] )
   
   SpecUtils::SaveSpectrumAsType format = str_to_save_type[outputformatstr];
   
+  if (format == SpecUtils::SaveSpectrumAsType::Template && template_file.empty()) 
+  {
+      cerr << "Template file must be provided for template format output" << endl;
+      return 4; // BDE_TODO: is this the right return code?
+  }
   
   assert( num_OutputMetaInfoDetectorNames == NumOutputMetaInfoDetectorType );
   OutputMetaInfoDetectorType metatype = NumOutputMetaInfoDetectorType;
@@ -1096,6 +1108,18 @@ int run_command_util( const int argc, char *argv[] )
       ending = "js";
   }//if( format == kD3HtmlSpectrumFile )
 #endif
+
+  if (format == SpecUtils::SaveSpectrumAsType::Template) 
+  {
+      // We already check above that template_file is not empty
+      // If we are using the template format, use the extension of the template file and not the input file
+      const string::size_type pos = template_file.find_last_of('.');
+      if (pos && (pos != string::npos) && (pos < (template_file.size() - 1)))
+      {
+          ending = template_file.substr(pos + 1);
+          SpecUtils::to_lower_ascii(ending);
+      }
+  }
   
   vector<string> renamed_dets;
   map<string,string> det_renames;
@@ -1913,6 +1937,10 @@ int run_command_util( const int argc, char *argv[] )
           }
 #endif  //#if( SpecUtils_ENABLE_D3_CHART )
             
+          case SpecUtils::SaveSpectrumAsType::Template:
+            wrote = info.write_template(output, template_file);
+            break;
+
           case SpecUtils::SaveSpectrumAsType::Chn:
           case SpecUtils::SaveSpectrumAsType::SpcBinaryInt:
           case SpecUtils::SaveSpectrumAsType::SpcBinaryFloat:
