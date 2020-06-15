@@ -260,7 +260,8 @@ namespace
     //We will only change spectroscopic gamma detector names, and their
     //  respective neutron names (e.g., if 'A1' and 'A1N' exist, we will change
     //  both)
-    set<string> names_to_change_set, nonN42_names_not_changed, final_n42_names;
+    set<string> names_to_change_set, nonN42_names_not_changed, final_n42_names, names_with_neutrons;
+    bool only_two_letter_dets = true;
     
     //ToDo: this next loop could be really slow on large files - should fix.
     for( const auto &m : info.measurements() )
@@ -275,7 +276,8 @@ namespace
           final_n42_names.insert( name );
         else
           nonN42_names_not_changed.insert( name );
-      }else if( m->gamma_counts() && m->gamma_counts()->size()>6 )
+      }
+      else if( m->gamma_counts() && m->gamma_counts()->size() > 6 )
       {
         //(is_n42_name(name) ? final_n42_names : names_to_change_set).insert(name);
         if( is_n42_name(name) )
@@ -284,11 +286,20 @@ namespace
           names_to_change_set.insert( name );
       }else
       {
-        nonN42_names_not_changed.insert( name );
+        if ( !m->contained_neutron() )
+        {
+          nonN42_names_not_changed.insert( name );
+        }  
+        else
+        {
+          names_to_change_set.insert( name );
+          names_with_neutrons.insert( name );
+        }
       }
+      if (name.size() != 2) only_two_letter_dets = false;
     }//for( loop over measurements )
     
-    //Some samples for a valid spectrascopic gamma detector may not have gamma
+    //Some samples for a valid spectroscopic gamma detector may not have gamma
     //  data, so make sure those detectors wont be in nonN42_names_not_changed
     for( const auto &name : final_n42_names )
       nonN42_names_not_changed.erase(name);
@@ -328,7 +339,7 @@ namespace
     //
     const size_t num_panel = (names_to_change.size() > 8) ? 8 : 4;
     
-    //Preffer to assign new pannels, instead of new MCAs within panels.
+    //Prefer to assign new panels, instead of new MCAs within panels.
     const size_t num_mca = (names_to_change.size() > 32) ? 8 : 1;
     
     //Loop over non-n42-compliant original names, and assign them the first
@@ -340,11 +351,14 @@ namespace
       //  (doing things the incredibly stupid way)
       string newprefix;
       
-      auto n42_name_taken = [&](const std::string &n ) -> bool {
+      auto n42_name_taken = [&](const std::string &n, const bool hasNeutrons ) -> bool {
         for( const auto &finalname : final_n42_names )
         {
           assert( finalname.size() >= 3 );
-          if( SpecUtils::iequals_ascii(finalname.substr(0,3), n) )
+          if (hasNeutrons && SpecUtils::iequals_ascii(finalname.substr(0,4), n.substr(0,4)))
+            return true;
+          else if( !hasNeutrons && SpecUtils::iequals_ascii(finalname.substr(0,3), n.substr(0,3)) 
+                    && (finalname[3] != 'N' && finalname[3] != 'n') )
             return true;
         }//for
         return false;
@@ -353,14 +367,14 @@ namespace
       //A few RPMs name their detectors as "A1", "A2", "B1", "B2", which are
       //  actually valid according to N42-2006, but it seems the convention has
       //  moved so that programs expect "Aa1", "Aa2", "Ba1", "Ba2"
-      if( name.size() == 2
+      if( only_two_letter_dets && name.size() == 2 
           && ((name[0]>='A' && name[0]<='H') || (name[0]>='a' && name[0]<='h'))
           && name[1]>='1' && name[1]<='8' )
       {
-        string moddedname = name.substr(0,1) + "a" + name.substr(1,1);
+        string moddedname = name.substr(0,1) + "a" + name.substr(1,1) + (names_with_neutrons.count(name) == 0 ? "" : "N");
         moddedname[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(moddedname[0])));
         
-        if( !n42_name_taken( moddedname) )
+        if( !n42_name_taken( moddedname, names_with_neutrons.count(name) != 0) )
           newprefix = moddedname;
       }//if( name like "A1" || "A2" || ... )
       
@@ -376,24 +390,23 @@ namespace
         candidate += ('A' + (name[15]-'1'));
         candidate += 'a';
         candidate += name[20];
-        
-        if( !n42_name_taken(candidate) )
+        if( !n42_name_taken(candidate, names_with_neutrons.count(name) != 0) )
           newprefix = candidate;
       }//if( detectors name like "DetectorInfoPan1DetG2" )
       
       
       for( size_t mca = 0; newprefix.empty() && mca < num_mca; ++mca )
       {
-        for( size_t pannel = 0; newprefix.empty() && pannel < num_panel; ++pannel )
+        for( size_t panel = 0; newprefix.empty() && panel < num_panel; ++panel )
         {
           for( size_t col = 0; newprefix.empty() && col < num_col; ++col )
           {
             string candidate;
             candidate += 'A' + col;
-            candidate += 'a' + pannel;
+            candidate += 'a' + panel;
             candidate += '1' + mca;
-            
-            if( !n42_name_taken(candidate) )
+            candidate += (names_with_neutrons.count(name) == 0 ? "" : "N");
+            if( !n42_name_taken( candidate , names_with_neutrons.count(name) != 0) ) 
               newprefix = candidate;
           }//for( loop over col )
         }//for( loop over pannel )
@@ -408,7 +421,8 @@ namespace
         continue;
       }
     
-      const string newname = newprefix + (name.empty() ? string("") : (" " + name));
+      const string newname = newprefix 
+                             + (name.empty() ? string("") : (" " + name)) ;
       
       if( print_debug )
         printf( "Changing detname='%s' to '%s'\n", name.c_str(), newname.c_str() );
@@ -437,7 +451,7 @@ namespace
         {
           cerr << "Warning: Unexpected error changing neutron detector name from"
                << " '" << name << "' to '" << newname << "'"
-               << " - results may be suspec (" << e.what() << ")" << endl;
+               << " - results may be suspect (" << e.what() << ")" << endl;
         }//
         
         nonN42_names_not_changed.erase( name+n );
@@ -452,7 +466,7 @@ namespace
         string notchanged;
         for( const auto &i : nonN42_names_not_changed )
           notchanged += "'" + i + "', ";
-        printf( "Didnt change det names: %s\n", notchanged.c_str() );
+        printf( "Didn't change det names: %s\n", notchanged.c_str() );
       }
       
       if( !unchanged_n42.empty() )
@@ -501,7 +515,7 @@ int run_command_util( const int argc, char *argv[] )
   bool no_calibration_spec, no_unknown_spec;
   bool background_only, foreground_only, calibation_only, intrinsic_only;
   //bool spectra_of_likely_interest_only;
-  vector<string> detector_renaimings;
+  vector<string> detector_renaming;
   
 #if( SpecUtils_ENABLE_D3_CHART )
   string html_to_include = "all";
@@ -646,7 +660,7 @@ int run_command_util( const int argc, char *argv[] )
       " can be (ex., for 1024 channels, a rebin factor > 10), then it will be rebined"
       " down to a single channel."
     )
-    ("rename-det", po::value<vector<string>>(&detector_renaimings)->composing(), //multitoken(),
+    ("rename-det", po::value<vector<string>>(&detector_renaming)->composing(), //multitoken(),
      "Rename detector.  You can specify this option multiple times, once for"
      " each detector to rename.  The argument to this option must be formated"
      " like \"OriginalName=NewName\", where names are case sensitive.\n\t"
@@ -1099,7 +1113,7 @@ int run_command_util( const int argc, char *argv[] )
   
   vector<string> renamed_dets;
   map<string,string> det_renames;
-  for( const string &detrename : detector_renaimings )
+  for( const string &detrename : detector_renaming )
   {
     const auto equal_pos = detrename.find( "=" );
     if( equal_pos == string::npos )
@@ -1113,7 +1127,7 @@ int run_command_util( const int argc, char *argv[] )
     const string to_name = SpecUtils::trim_copy( detrename.substr(equal_pos+1) );
     det_renames[from_name] = to_name;
     renamed_dets.push_back( to_name );
-  }//for( string detrename : detector_renaimings )
+  }//for( string detrename : detector_renamings )
   
   
   
@@ -1214,8 +1228,8 @@ int run_command_util( const int argc, char *argv[] )
       
       auto remove_type = [&info,inname,prefilter_samples]( SpecUtils::SourceType type ){
         int nremoved = 0;
-        vector<shared_ptr<const SpecUtils::Measurement>> meass = info.measurements();
-        for( shared_ptr<const SpecUtils::Measurement> &m : meass )
+        vector<shared_ptr<const SpecUtils::Measurement>> meas = info.measurements();
+        for( shared_ptr<const SpecUtils::Measurement> &m : meas )
         {
           SpecUtils::SourceType record_type = m->source_type();
           
@@ -1399,20 +1413,20 @@ int run_command_util( const int argc, char *argv[] )
         continue;
       }
     
-      vector< std::shared_ptr<const SpecUtils::Measurement> > meass = info.measurements();
+      vector< std::shared_ptr<const SpecUtils::Measurement> > meas = info.measurements();
       
       
       
-      bool containted_netruon = false;
-      for( size_t i = 0; i < meass.size(); ++i )
-        containted_netruon |= meass[i]->contained_neutron();
+      bool contained_neutron = false;
+      for( size_t i = 0; i < meas.size(); ++i )
+        contained_neutron |= meas[i]->contained_neutron();
       
       switch( metatype )
       {
         case DetectiveEX:
-          for( size_t i = 0; i < meass.size(); ++i )
-            if( !meass[i]->contained_neutron() )
-              info.set_contained_neutrons( true, 0.0, meass[i] );
+          for( size_t i = 0; i < meas.size(); ++i )
+            if( !meas[i]->contained_neutron() )
+              info.set_contained_neutrons( true, 0.0, meas[i] );
 
           if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx )
             break;
@@ -1425,8 +1439,8 @@ int run_command_util( const int argc, char *argv[] )
         break;
           
         case DetectiveDX:
-          for( size_t i = 0; i < meass.size(); ++i )
-            info.set_contained_neutrons( false, 0.0f, meass[i] );
+          for( size_t i = 0; i < meas.size(); ++i )
+            info.set_contained_neutrons( false, 0.0f, meas[i] );
           
           if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx )
             break;
@@ -1450,9 +1464,9 @@ int run_command_util( const int argc, char *argv[] )
         break;
           
         case DetectiveEX100:
-          for( size_t i = 0; i < meass.size(); ++i )
-            if( !meass[i]->contained_neutron() )
-              info.set_contained_neutrons( true, 0.0, meass[i] );
+          for( size_t i = 0; i < meas.size(); ++i )
+            if( !meas[i]->contained_neutron() )
+              info.set_contained_neutrons( true, 0.0, meas[i] );
 
           if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx100 )
             break;
@@ -1465,8 +1479,8 @@ int run_command_util( const int argc, char *argv[] )
           break;
           
         case DetectiveDX100:
-          for( size_t i = 0; i < meass.size(); ++i )
-            info.set_contained_neutrons( false, 0.0f, meass[i] );
+          for( size_t i = 0; i < meas.size(); ++i )
+            info.set_contained_neutrons( false, 0.0f, meas[i] );
           
           if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx100 )
             break;
@@ -1492,7 +1506,7 @@ int run_command_util( const int argc, char *argv[] )
           break;
           
         case identiFINDERNG:
-          if( containted_netruon )
+          if( contained_neutron )
             info.set_instrument_model( "identiFINDER 2 NGH" );
           else
             info.set_instrument_model( "identiFINDER 2 NG" );
@@ -1502,7 +1516,7 @@ int run_command_util( const int argc, char *argv[] )
           break;
           
         case identiFINDERLaBr3:
-          if( containted_netruon )
+          if( contained_neutron )
             info.set_instrument_model( "identiFINDER 2 LGH" );
           else
             info.set_instrument_model( "identiFINDER 2 LG" );
