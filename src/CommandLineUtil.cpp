@@ -838,6 +838,7 @@ int run_command_util( const int argc, char *argv[] )
   str_to_save_type["gr135"]     = SpecUtils::SaveSpectrumAsType::ExploraniumGr135v2;
   str_to_save_type["dat"]       = SpecUtils::SaveSpectrumAsType::ExploraniumGr135v2;
   str_to_save_type["spe"]       = SpecUtils::SaveSpectrumAsType::SpeIaea;
+  str_to_save_type["cnf"]       = SpecUtils::SaveSpectrumAsType::Cnf;
 
 #if( SpecUtils_ENABLE_D3_CHART )
   str_to_save_type["html"]       = SpecUtils::SaveSpectrumAsType::HtmlD3;
@@ -1226,7 +1227,7 @@ int run_command_util( const int argc, char *argv[] )
           if( record_type == type )
           {
             ++nremoved;
-            info.remove_measurment( m, false );
+            info.remove_measurement( m, false );
           }
         }//for( loop over measurements )
         
@@ -1265,8 +1266,8 @@ int run_command_util( const int argc, char *argv[] )
         std::shared_ptr<SpecUtils::Measurement> summed_meas = info.sum_measurements( sample_num, det_to_use);
         vector<shared_ptr<const SpecUtils::Measurement>> meass = info.measurements();
         for( shared_ptr<const SpecUtils::Measurement> &m : meass )
-          info.remove_measurment( m, false );
-        info.add_measurment( summed_meas, true );
+          info.remove_measurement( m, false );
+        info.add_measurement( summed_meas, true );
         try
         {
           info.cleanup_after_load();
@@ -1534,6 +1535,7 @@ int run_command_util( const int argc, char *argv[] )
           || format == SpecUtils::SaveSpectrumAsType::SpcBinaryFloat
           || format == SpecUtils::SaveSpectrumAsType::SpcAscii
           || format == SpecUtils::SaveSpectrumAsType::SpeIaea
+          || format == SpecUtils::SaveSpectrumAsType::Cnf
          )
       {
         const vector< std::shared_ptr<const SpecUtils::Measurement> > meass = info.measurements();
@@ -1578,6 +1580,8 @@ int run_command_util( const int argc, char *argv[] )
             wrote = info.write_ascii_spc( output, samplenums, detnumset );
           else if( format == SpecUtils::SaveSpectrumAsType::SpeIaea )
             wrote = info.write_iaea_spe( output, samplenums, detnumset );
+          else if( format == SpecUtils::SaveSpectrumAsType::Cnf )
+            wrote = info.write_cnf( output, samplenums, detnumset );
           else
           {
             assert( 0 );
@@ -1662,6 +1666,8 @@ int run_command_util( const int argc, char *argv[] )
                   wrote = info.write_ascii_spc( output, samplenums, detnumset );
                 else if( format == SpecUtils::SaveSpectrumAsType::SpeIaea )
                   wrote = info.write_iaea_spe( output, samplenums, detnumset );
+                else if( format == SpecUtils::SaveSpectrumAsType::Cnf )
+                  wrote = info.write_cnf( output, samplenums, detnumset );
                 else
                   assert( 0 );
               
@@ -1919,6 +1925,7 @@ int run_command_util( const int argc, char *argv[] )
           case SpecUtils::SaveSpectrumAsType::NumTypes:
           case SpecUtils::SaveSpectrumAsType::SpeIaea:
           case SpecUtils::SaveSpectrumAsType::SpcAscii:
+          case SpecUtils::SaveSpectrumAsType::Cnf:
             assert( 0 );
           break;
         }//switch( format )

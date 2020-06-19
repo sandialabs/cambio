@@ -79,6 +79,7 @@ const char *description( const SaveSpectrumAsType type )
     case SaveSpectrumAsType::ExploraniumGr130v0:    return "GR130 DAT";
     case SaveSpectrumAsType::ExploraniumGr135v2:    return "GR135 DAT";
     case SaveSpectrumAsType::SpeIaea:               return "SPE IAEA";
+    case SaveSpectrumAsType::Cnf:                   return "Canberra CNF";
 #if( SpecUtils_ENABLE_D3_CHART )
     case SaveSpectrumAsType::HtmlD3:                return "HTML";
 #endif
@@ -333,8 +334,8 @@ bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
         
         if( info.measurements().size() > 1 )
         {
-          info.remove_measurments( info.measurements() );
-          info.add_measurment( m, true );
+          info.remove_measurements( info.measurements() );
+          info.add_measurement( m, true );
         }//if( info.measurements().size() > 1 )
         
         switch( format )
@@ -368,6 +369,7 @@ bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
           case SaveSpectrumAsType::NumTypes:
           case SaveSpectrumAsType::SpeIaea:
           case SaveSpectrumAsType::SpcAscii:
+          case SaveSpectrumAsType::Cnf:
             break;
         }//switch( type )
       }//if( !m ) / else
@@ -402,6 +404,12 @@ bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
     case SaveSpectrumAsType::SpeIaea:
     {
       ok = meas->write_iaea_spe( output, samplenums, detnums );
+      break;
+    }
+      
+    case SaveSpectrumAsType::Cnf:
+    {
+      ok = meas->write_cnf( output, samplenums, detnums );
       break;
     }
       
@@ -481,7 +489,7 @@ bool writeIndividualSpectraToOutputFile( const SaveSpectrumAsType format,
       }
     }//foreach( std::shared_ptr<const SpecUtils::Measurement> oldm, info.measurements() )
     
-    info.remove_measurments( toremove );
+    info.remove_measurements( toremove );
     
     
     if( info.measurements().empty() )
@@ -552,6 +560,7 @@ bool writeIndividualSpectraToOutputFile( const SaveSpectrumAsType format,
     case SaveSpectrumAsType::SpcBinaryFloat:
     case SaveSpectrumAsType::SpcAscii:
     case SaveSpectrumAsType::SpeIaea:
+    case SaveSpectrumAsType::Cnf:
     {
       if( samplenums.size()==1 && detectors.size()==1 )
       {
@@ -567,6 +576,8 @@ bool writeIndividualSpectraToOutputFile( const SaveSpectrumAsType format,
           ok = info.write_ascii_spc( output, samplenums, detnums );
         else if( format == SaveSpectrumAsType::SpeIaea )
           ok = info.write_iaea_spe( output, samplenums, detnums );
+        else if( format == SaveSpectrumAsType::Cnf )
+          ok = info.write_cnf( output, samplenums, detnums );
         else
           assert( 0 );
       }else
@@ -923,6 +934,7 @@ void SaveWidget::save()
       || type == SaveSpectrumAsType::SpcBinaryFloat
       || type == SaveSpectrumAsType::SpcAscii
       || type == SaveSpectrumAsType::SpeIaea
+      || type == SaveSpectrumAsType::Cnf
      )
   {
     const int id = m_saveToSingleSpecFileGroup->checkedId();
@@ -1135,10 +1147,10 @@ void SaveWidget::save()
             samplemeas.push_back( m );
         }//foreach( const int sample, sample_nums )
         
-        info->remove_measurments( info->measurements() );
+        info->remove_measurements( info->measurements() );
         
         for( auto m : samplemeas )
-          info->add_measurment( m, false );
+          info->add_measurement( m, false );
         info->cleanup_after_load(); //necassarry
         
         if( info->measurements().size() )
@@ -1463,6 +1475,16 @@ void SaveWidget::formatChanged()
              " time, real time, energy calibration, comments, and title."
              " Deviation pairs, gps, model, and other meta information will"
              " be lost";
+      break;
+      
+      case SaveSpectrumAsType::Cnf:
+      if( currname.size() )
+        currname += ".cnf";
+      m_saveToMultiSpecFile->hide();
+      m_saveToSingleSpecFile->show();
+      desc = "Canberra CNF files are binary single spectrum files.\n"
+             "Saving to this format preserves start time, live time, real time, energy calibration, and gps coordinates."
+             " Neutron counts, deviation pairs, model, RIID results, and other meta information will be lost";
       break;
       
 #if( SpecUtils_ENABLE_D3_CHART )
