@@ -535,7 +535,7 @@ int run_command_util( const int argc, char *argv[] )
               " N42 (defaults to 2012 variant), 2012N42, 2006N42,"
               " CHN (binary integer variant), SPC (defaults to int variant),"
               " INTSPC, FLTSPC, SPE (IAEA format), asciispc (ASCII version of"
-              " SPC), gr130 (256 channel binary format), template (Templated text file)"
+              " SPC), gr130 (256 channel binary format)"
 #if( SpecUtils_ENABLE_D3_CHART )
               ", html (webpage plot), json (chart data in json format, equiv to '--format=html --html-output=json')"
 #endif
@@ -550,7 +550,7 @@ int run_command_util( const int argc, char *argv[] )
      " options given in the INI file.  Most options can only be specified once."
     )
     ("template-file", po::value<string>(&template_file),
-        "Filesystem path of the template file to use."
+        "Filesystem path of the template file to use (overrides --format option)."
     )
     ("inputdir", po::value<string>(&inputdir),
      "Input directory.  All files in specified directory will (try to) be"
@@ -851,7 +851,6 @@ int run_command_util( const int argc, char *argv[] )
   str_to_save_type["css"]        = SpecUtils::SaveSpectrumAsType::HtmlD3;
 #endif
 
-  str_to_save_type["template"] = SpecUtils::SaveSpectrumAsType::Template;
 
   
   //spec_exts: extensions of files that we can read.
@@ -987,10 +986,10 @@ int run_command_util( const int argc, char *argv[] )
   
   SpecUtils::SaveSpectrumAsType format = str_to_save_type[outputformatstr];
   
-  if (format == SpecUtils::SaveSpectrumAsType::Template && template_file.empty()) 
+  if (!template_file.empty()) 
   {
-      cerr << "Template file must be provided for template format output" << endl;
-      return 4; // BDE_TODO: is this the right return code?
+      // Assume template format if template file is provided
+      format = SpecUtils::SaveSpectrumAsType::Template;
   }
   
   assert( num_OutputMetaInfoDetectorNames == NumOutputMetaInfoDetectorType );
