@@ -10,6 +10,7 @@ set( CMAKE_CXX_STANDARD_REQUIRED ON )
 option( BUILD_CAMBIO_GUI "Builds the GUI component of Cambio" ON )
 option( BUILD_CAMBIO_COMMAND_LINE "Builds the command line component of Cambio" ON )
 option( SHOW_CAMBIO_SPLASH_SCREEN "Show splash screen on application start" OFF )
+option( BUILD_TEMPLATE_REGRESSION_TEST "Creates executuable to perform template engine regression tests" OFF )
 
 set( Cambio_VERSION Development CACHE STRING "Cambio Version" )
 
@@ -317,3 +318,7 @@ endif()
 if( IOS )
   ADD_QT_PROJECT( ${PROJECT_NAME} "" "CambioIOS.pro" )
 endif()
+
+if( BUILD_TEMPLATE_REGRESSION_TEST )
+  add_subdirectory( template_test )
+endif( BUILD_TEMPLATE_REGRESSION_TEST )
