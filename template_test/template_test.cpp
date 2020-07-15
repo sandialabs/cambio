@@ -70,6 +70,51 @@ int testChannelDataTemplate(path input_directory, path output_directory) {
 	return EXIT_SUCCESS;
 }
 
+int testChannelDataCompressionTemplate(path input_directory, path output_directory) {
+	cout << "TEST: channel data template ... ";
+
+	path expectedOutput = output_directory / path("TEST_channel_data_compressed.n42");
+
+	int result = generateOutput(
+		input_directory / path("pu239_1C_Detective_X_50cm.pcf"),
+		input_directory / path("TEST_channel_data_compressed.n42"),
+		expectedOutput);
+
+	// Load and check output file
+	if (result != 0) {
+		cout << "FAILED, error running process" << endl;
+		return EXIT_FAILURE;
+	}
+
+	if (!boost::filesystem::exists(expectedOutput)) {
+		cout << "FAILED, file not found" << endl;
+		return EXIT_FAILURE;
+	}
+
+	string absOutputPath = boost::filesystem::absolute(expectedOutput).string();
+	rapidxml::file<> xmlFile(absOutputPath.c_str());
+	rapidxml::xml_document<> doc;
+	doc.parse<0>(xmlFile.data());
+
+	rapidxml::xml_node<>* node = doc.first_node("ChannelData");
+	string checkValue = string(node->value());
+
+	if (checkValue.length() != 24240) {
+		cout << "FAILED, data incorrect length: " << checkValue.length() << endl;
+		return EXIT_FAILURE;
+	}
+
+	string checkCompressionCode = string(node->first_attribute("compressionCode")->value());
+	if (checkCompressionCode != "CountedZeros") {
+		cout << "FAILED, incorrect compression code: " << checkCompressionCode << endl;
+		return EXIT_FAILURE;
+	}
+
+	cout << "SUCCESS" << endl;
+
+	return EXIT_SUCCESS;
+}
+
 int main(int argc, char** argv)
 {
 	cout << "Cambio Template Test Utility" << endl;
@@ -86,8 +131,8 @@ int main(int argc, char** argv)
 	int testCount = 0;
 	int failureCount = 0;
 
-	failureCount += testChannelDataTemplate(input_directory, output_directory);
-	testCount++;
+	failureCount += testChannelDataTemplate(input_directory, output_directory);	testCount++;
+	failureCount += testChannelDataCompressionTemplate(input_directory, output_directory);	testCount++;
 
 	cout << endl;
 	cout << "Test Summary" << endl;
