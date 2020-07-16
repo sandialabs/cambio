@@ -28,7 +28,19 @@ int generateOutput(path inputFile, path inputTemplate, path outputFile) {
 	commandString.append(" --template-file=");
 	commandString.append(inputTemplate.string());
 
-	return bp::system(commandString);
+	int result = bp::system(commandString);
+
+	if (result != 0) {
+		cout << "FAILED, error running process" << endl;
+		return EXIT_FAILURE;
+	}
+
+	if (!boost::filesystem::exists(outputFile)) {
+		cout << "FAILED, file not found" << endl;
+		return EXIT_FAILURE;
+	}
+
+	return EXIT_SUCCESS;
 }
 
 int testChannelDataTemplate(path input_directory, path output_directory) {
@@ -36,22 +48,15 @@ int testChannelDataTemplate(path input_directory, path output_directory) {
 
 	path expectedOutput = output_directory / path("TEST_channel_data.n42");
 
-	int result = generateOutput(
+	if (generateOutput(
 		input_directory / path("pu239_1C_Detective_X_50cm.pcf"),
 		input_directory / path("TEST_channel_data.n42"),
-		expectedOutput);
+		expectedOutput) != 0) 
+	{
+		return EXIT_FAILURE;
+	}
 
 	// Load and check output file
-	if (result != 0) {
-		cout << "FAILED, error running process" << endl;
-		return EXIT_FAILURE;
-	}
-
-	if (!boost::filesystem::exists(expectedOutput)) {
-		cout << "FAILED, file not found" << endl;
-		return EXIT_FAILURE;
-	}
-
 	string absOutputPath = boost::filesystem::absolute(expectedOutput).string();
 	rapidxml::file<> xmlFile(absOutputPath.c_str());
 	rapidxml::xml_document<> doc;
@@ -75,19 +80,11 @@ int testChannelDataCompressionTemplate(path input_directory, path output_directo
 
 	path expectedOutput = output_directory / path("TEST_channel_data_compressed.n42");
 
-	int result = generateOutput(
+	if (generateOutput(
 		input_directory / path("pu239_1C_Detective_X_50cm.pcf"),
 		input_directory / path("TEST_channel_data_compressed.n42"),
-		expectedOutput);
-
-	// Load and check output file
-	if (result != 0) {
-		cout << "FAILED, error running process" << endl;
-		return EXIT_FAILURE;
-	}
-
-	if (!boost::filesystem::exists(expectedOutput)) {
-		cout << "FAILED, file not found" << endl;
+		expectedOutput) != 0)
+	{
 		return EXIT_FAILURE;
 	}
 
@@ -115,6 +112,62 @@ int testChannelDataCompressionTemplate(path input_directory, path output_directo
 	return EXIT_SUCCESS;
 }
 
+int testTimesTemplate(path input_directory, path output_directory) {
+	cout << "TEST: channel data template ... ";
+
+	path expectedOutput = output_directory / path("TEST_times.xml");
+
+	if (generateOutput(
+		input_directory / path("pu239_1C_Detective_X_50cm.pcf"),
+		input_directory / path("TEST_times.xml"),
+		expectedOutput) != 0)
+	{
+		return EXIT_FAILURE;
+	}
+
+	string absOutputPath = boost::filesystem::absolute(expectedOutput).string();
+	rapidxml::file<> xmlFile(absOutputPath.c_str());
+	rapidxml::xml_document<> doc;
+	doc.parse<0>(xmlFile.data());
+
+	rapidxml::xml_node<>* node = doc.first_node("Test1");
+	string checkValue = string(node->value());
+
+	if (checkValue != "2890.6103515625") {
+		cout << "FAILED, found string " << checkValue << endl;
+		return EXIT_FAILURE;
+	}
+
+	node = doc.first_node("Test2");
+	checkValue = string(node->value());
+
+	if (checkValue != "3600.0") {
+		cout << "FAILED, found string " << checkValue << endl;
+		return EXIT_FAILURE;
+	}
+
+	node = doc.first_node("Test3");
+	checkValue = string(node->value());
+
+	if (checkValue != "2890.61") {
+		cout << "FAILED, found string " << checkValue << endl;
+		return EXIT_FAILURE;
+	}
+
+	node = doc.first_node("Test4");
+	checkValue = string(node->value());
+
+	if (checkValue != "PT48M10.610S") {
+		cout << "FAILED, found string " << checkValue << endl;
+		return EXIT_FAILURE;
+	}
+
+
+	cout << "SUCCESS" << endl;
+
+	return EXIT_SUCCESS;
+}
+
 int main(int argc, char** argv)
 {
 	cout << "Cambio Template Test Utility" << endl;
@@ -133,6 +186,7 @@ int main(int argc, char** argv)
 
 	failureCount += testChannelDataTemplate(input_directory, output_directory);	testCount++;
 	failureCount += testChannelDataCompressionTemplate(input_directory, output_directory);	testCount++;
+	failureCount += testTimesTemplate(input_directory, output_directory);	testCount++;
 
 	cout << endl;
 	cout << "Test Summary" << endl;
