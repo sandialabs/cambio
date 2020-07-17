@@ -226,6 +226,35 @@ int test_FLIRR400_2006(path template_directory, path output_directory) {
 	return EXIT_SUCCESS;
 }
 
+int test_FLIRR400_2012(path template_directory, path output_directory) {
+	cout << "TEST: FLIR R400 2012 template ... ";
+
+	path expectedOutput = output_directory / path("FLIR R400 Identification 3916.ANSI N42.42 2012.n42");
+	path inputFile = template_directory / path("Test") / path("FLIR_R400") / path("Identification 3916.ANSI N42.42 2012.n42");
+
+	if (generateOutput(
+		inputFile,
+		template_directory / path("FLIR_R400") / path("TEMPLATE_Identification 3916.ANSI N42.42 2012.n42"),
+		expectedOutput) != 0)
+	{
+		return EXIT_FAILURE;
+	}
+
+	string absOutputPath = boost::filesystem::absolute(expectedOutput).string();
+	string absInputPath = boost::filesystem::absolute(inputFile).string();
+
+	int lineDiff = compareFiles(absInputPath, absOutputPath);
+	if (lineDiff >= 0) {
+
+		cout << "FAILED, files differ on line " << lineDiff << endl;
+		return EXIT_FAILURE;
+	}
+
+	cout << "SUCCESS" << endl;
+
+	return EXIT_SUCCESS;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -247,6 +276,7 @@ int main(int argc, char** argv)
 	failureCount += testChannelDataCompressionTemplate(template_directory, output_directory); testCount++;
 	failureCount += testTimesTemplate(template_directory, output_directory); testCount++;
 	failureCount += test_FLIRR400_2006(template_directory, output_directory); testCount++;
+	failureCount += test_FLIRR400_2012(template_directory, output_directory); testCount++;
 
 	cout << endl;
 	cout << "Test Summary" << endl;
