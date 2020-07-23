@@ -194,8 +194,68 @@ int compareFiles(const std::string& p1, const std::string& p2) {
 		}
 	}
 
+	if (getline(f1, line1) || getline(f2, line2)) {
+		// files have different numbers of lines, so flag that
+		return lineCount;
+	}
+
 	return -1;
 }
+
+int test_Aspect_MKC(path template_directory, path output_directory) {
+	cout << "TEST: Aspect MKC template ... ";
+
+	path expectedOutput = output_directory / path("Aspect MKC.spc");
+	path inputFile = template_directory / path("Test") / path("Aspect_MKC") / path("s0044.spc");
+
+	if (false /* this one should fail! */ == generateOutput(
+		inputFile,
+		template_directory / path("Aspect MKC") / path("TEMPLATE_s0044.spc"),
+		expectedOutput) != 0)
+	{
+		cout << "Template should have failed because this is a binary file" << endl;
+		return EXIT_SUCCESS;
+	}
+
+	return EXIT_SUCCESS;
+}
+
+int test_AtomTex_6101C(path template_directory, path output_directory) {
+	cout << "TEST: AtomTex 6101C SPE template ... ";
+
+	path expectedOutput = output_directory / path("AtomTex_6101C_spec_20170131_151620.spe");
+	path inputFile = template_directory / path("Test") / path("AtomTex_6101C") / path("spec_20170131_151620.spe");
+
+	if (generateOutput(
+		inputFile,
+		template_directory / path("AtomTex_6101C") / path("TEMPLATE_spec_20170131_151620.spe"),
+		expectedOutput) != 0)
+	{
+		return EXIT_FAILURE;
+	}
+
+	//TESTCODE
+	generateOutput(
+		inputFile,
+		template_directory / path("Test") / path("TEMPLATE_ALL.txt"),
+		output_directory / path("AtomTex_6101C_spec_20170131_151620_all.txt")
+	);
+
+	string absOutputPath = boost::filesystem::absolute(expectedOutput).string();
+	string absInputPath = boost::filesystem::absolute(inputFile).string();
+
+	int lineDiff = compareFiles(absInputPath, absOutputPath);
+	if (lineDiff >= 0) {
+
+		cout << "FAILED, files differ on line " << lineDiff << endl;
+		return EXIT_FAILURE;
+	}
+
+	cout << "SUCCESS" << endl;
+
+	return EXIT_SUCCESS;
+}
+
 
 int test_FLIRR400_2006(path template_directory, path output_directory) {
 	cout << "TEST: FLIR R400 2006 template ... ";
@@ -255,7 +315,6 @@ int test_FLIRR400_2012(path template_directory, path output_directory) {
 	return EXIT_SUCCESS;
 }
 
-
 int main(int argc, char** argv)
 {
 	cout << "Cambio Template Test Utility" << endl;
@@ -266,8 +325,12 @@ int main(int argc, char** argv)
 
 	// Clean output directory and recreate
 	cout << "Cleaning and recreating output directory..." << endl;
-	boost::filesystem::remove_all(output_directory);
-	boost::filesystem::create_directory(output_directory);
+
+	try {
+		boost::filesystem::remove_all(output_directory);
+		boost::filesystem::create_directory(output_directory);
+	}
+	catch (exception&) {}
 
 	int testCount = 0;
 	int failureCount = 0;
@@ -275,6 +338,8 @@ int main(int argc, char** argv)
 	failureCount += testChannelDataTemplate(template_directory, output_directory); testCount++;
 	failureCount += testChannelDataCompressionTemplate(template_directory, output_directory); testCount++;
 	failureCount += testTimesTemplate(template_directory, output_directory); testCount++;
+	//failureCount += test_Aspect_MKC(template_directory, output_directory); testCount++; // This one is a binary file that fails anyway
+	failureCount += test_AtomTex_6101C(template_directory, output_directory); testCount++;
 	failureCount += test_FLIRR400_2006(template_directory, output_directory); testCount++;
 	failureCount += test_FLIRR400_2012(template_directory, output_directory); testCount++;
 
