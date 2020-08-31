@@ -71,6 +71,7 @@
 #include "SpecUtils/SpecFile.h"
 #include "SpecUtils/StringAlgo.h"
 #include "SpecUtils/Filesystem.h"
+#include "SpecUtils/EnergyCalibration.h"
 
 
 #if defined(__APPLE__)
@@ -631,7 +632,19 @@ void MainWindow::timeRangeSelected( int firstsample, int lastsample,
   if( m_displayedSampleNumbers.empty() )
     m_displayedSampleNumbers = sample_numbers;
   
-  auto meas = m_measurment->sum_measurements( m_displayedSampleNumbers, m_detectorsDisplayed );
+  vector<string> detnames;
+  if( m_measurment )
+  {
+    const vector<string> &alldets = m_measurment->detector_names();
+    for( size_t i = 0; i < m_detectorsDisplayed.size() && i < alldets.size(); ++i )
+    {
+      if( m_detectorsDisplayed[i] )
+        detnames.push_back( alldets[i] );
+    }
+  }//if( m_measurment )
+  
+  
+  auto meas = m_measurment->sum_measurements( m_displayedSampleNumbers, detnames, nullptr );
   
   setTimeText( meas );
   m_spectrum->setSpectrum( meas, true, m_measurment->filename().c_str() );
@@ -727,8 +740,19 @@ void MainWindow::updateForSampleNumChange()
   
   m_displayedSampleNumbers.clear();
   m_displayedSampleNumbers.insert( m_currentSampleNum );
-  auto meas = m_measurment->sum_measurements( m_displayedSampleNumbers,
-                                               m_detectorsDisplayed );
+  
+  vector<string> detnames;
+  if( m_measurment )
+  {
+    const vector<string> &alldets = m_measurment->detector_names();
+    for( size_t i = 0; i < m_detectorsDisplayed.size() && i < alldets.size(); ++i )
+    {
+      if( m_detectorsDisplayed[i] )
+        detnames.push_back( alldets[i] );
+    }
+  }//if( m_measurment )
+  
+  auto meas = m_measurment->sum_measurements( m_displayedSampleNumbers, detnames, nullptr );
   
   string title = !!meas ? meas->title() : string("");
   if( title.empty() )
@@ -917,8 +941,17 @@ void MainWindow::calculateTimeSeriesData(
   auto times = make_shared<vector<float>>(bin_edges);
   const size_t ntimes = times->size();
   
-  std::shared_ptr< vector<float> > gamma_counts( new vector<float>(ntimes) );
-  std::shared_ptr< vector<float> > nuetron_counts( new vector<float>(ntimes) );
+  std::shared_ptr<vector<float>> gamma_counts, nuetron_counts;
+  if( ntimes )
+  {
+    assert( ntimes >= sample_numbers.size() );
+    gamma_counts = std::make_shared<vector<float>>( ntimes - 1, 0.0f );
+    nuetron_counts = std::make_shared<vector<float>>( ntimes - 1, 0.0f );
+  }else
+  {
+    gamma_counts = std::make_shared<vector<float>>();
+    nuetron_counts = std::make_shared<vector<float>>();
+  }
   
   foreach( const int sample_number, sample_numbers )
   {
@@ -929,7 +962,7 @@ void MainWindow::calculateTimeSeriesData(
     if( pos == end )
       continue;
     
-    int bin = static_cast<int>(pos - begin) + 1;  //XXX - I'm not totally sure of this
+    const size_t channel = static_cast<int>(pos - begin);
     
     const vector< std::shared_ptr<const SpecUtils::Measurement> > meas
                          = m_measurment->sample_measurements( sample_number );
@@ -950,19 +983,40 @@ void MainWindow::calculateTimeSeriesData(
     
     if( live_time > 0.0f )
       num_gamma /= (live_time / meas.size());
-    gamma_counts->operator[](bin-1) += num_gamma;
-    nuetron_counts->operator[](bin-1) += num_nuteron;
+    
+    if( channel < gamma_counts->size() )
+    {
+      gamma_counts->operator[](channel) += num_gamma;
+      nuetron_counts->operator[](channel) += num_nuteron;
+    }
   }//foreach( const int sample_number, sample_numbers )
   
-  
-  grosscounts->set_channel_energies( times );
   grosscounts->set_gamma_counts( gamma_counts, 0.0f, 0.0f );
   grosscounts->set_neutron_counts( *nuetron_counts );
+  
+  if( ntimes )
+  {
+    auto cal = make_shared<SpecUtils::EnergyCalibration>();
+    cal->set_lower_channel_energy( ntimes - 1, *times );
+    grosscounts->set_energy_calibration( cal );
+  }
 }//void MainWindow::calculateTimeSeriesData()
 
 
 void MainWindow::displayMeasurment()
 {
+  vector<string> detnames;
+  
+  if( m_measurment )
+  {
+    const vector<string> &alldets = m_measurment->detector_names();
+    for( size_t i = 0; i < m_detectorsDisplayed.size() && i < alldets.size(); ++i )
+    {
+      if( m_detectorsDisplayed[i] )
+        detnames.push_back( alldets[i] );
+    }
+  }//if( m_measurment )
+  
   if( !m_measurment )
   {
     std::shared_ptr<SpecUtils::Measurement> dummy;
@@ -993,9 +1047,10 @@ void MainWindow::displayMeasurment()
     m_chartlayout->setRowStretch( 1, 2 );
     
     m_sampleChanger->hide();
+      
+    auto meas = m_measurment->sum_measurements( m_displayedSampleNumbers, detnames, nullptr );
     
-    auto meas = m_measurment->sum_measurements( m_displayedSampleNumbers,
-                                                     m_detectorsDisplayed );
+    
     
     qDebug() << "NumNeutrons=" << meas->neutron_counts_sum() << endl;
     
@@ -1030,8 +1085,7 @@ void MainWindow::displayMeasurment()
       const int nbin = dialog.exec();
 
       m_measurment->keep_n_bin_spectra_only( static_cast<size_t>(nbin) );
-      meas = m_measurment->sum_measurements( m_displayedSampleNumbers,
-                                             m_detectorsDisplayed );
+      meas = m_measurment->sum_measurements( m_displayedSampleNumbers, detnames, nullptr );
       
       //Still not quite right - needs a cleanup probably
     }//if( !meas && m_measurment->gamma_channel_counts().size() > 1 )
@@ -1057,7 +1111,7 @@ void MainWindow::displayMeasurment()
     
     m_sampleChanger->hide();
     
-    auto meas = m_measurment->sum_measurements( m_displayedSampleNumbers, m_detectorsDisplayed );
+    auto meas = m_measurment->sum_measurements( m_displayedSampleNumbers, detnames, nullptr );
     
     string title = !!meas ? meas->title() : string("");
     if( title.empty() )
@@ -1082,7 +1136,7 @@ void MainWindow::displayMeasurment()
     
     m_displayedSampleNumbers.clear();
     m_displayedSampleNumbers.insert( *(m_measurment->sample_numbers().begin()) );
-    auto meas = m_measurment->sum_measurements( m_displayedSampleNumbers, m_detectorsDisplayed );
+    auto meas = m_measurment->sum_measurements( m_displayedSampleNumbers, detnames, nullptr );
     
     string title = !!meas ? meas->title() : string("");
     if( title.empty() )

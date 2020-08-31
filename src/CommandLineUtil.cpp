@@ -533,7 +533,7 @@ int run_command_util( const int argc, char *argv[] )
               " N42 (defaults to 2012 variant), 2012N42, 2006N42,"
               " CHN (binary integer variant), SPC (defaults to int variant),"
               " INTSPC, FLTSPC, SPE (IAEA format), asciispc (ASCII version of"
-              " SPC), gr130 (256 channel binary format)"
+              " SPC), TKA, gr130 (256 channel binary format), CNF"
 #if( SpecUtils_ENABLE_D3_CHART )
               ", html (webpage plot), json (chart data in json format, equiv to '--format=html --html-output=json')"
 #endif
@@ -839,6 +839,7 @@ int run_command_util( const int argc, char *argv[] )
   str_to_save_type["dat"]       = SpecUtils::SaveSpectrumAsType::ExploraniumGr135v2;
   str_to_save_type["spe"]       = SpecUtils::SaveSpectrumAsType::SpeIaea;
   str_to_save_type["cnf"]       = SpecUtils::SaveSpectrumAsType::Cnf;
+  str_to_save_type["tka"]       = SpecUtils::SaveSpectrumAsType::Tka;
 
 #if( SpecUtils_ENABLE_D3_CHART )
   str_to_save_type["html"]       = SpecUtils::SaveSpectrumAsType::HtmlD3;
@@ -1261,9 +1262,8 @@ int run_command_util( const int argc, char *argv[] )
       if( sum_all_spectra )
       {
         const set<int> sample_num = info.sample_numbers();
-        const std::vector<int> det_nums = info.detector_numbers();
-        const vector<bool> det_to_use( det_nums.size(), true );
-        std::shared_ptr<SpecUtils::Measurement> summed_meas = info.sum_measurements( sample_num, det_to_use);
+        const std::vector<string> det_names = info.detector_names();
+        shared_ptr<SpecUtils::Measurement> summed_meas = info.sum_measurements( sample_num, det_names, nullptr );
         vector<shared_ptr<const SpecUtils::Measurement>> meass = info.measurements();
         for( shared_ptr<const SpecUtils::Measurement> &m : meass )
           info.remove_measurement( m, false );
@@ -1536,6 +1536,7 @@ int run_command_util( const int argc, char *argv[] )
           || format == SpecUtils::SaveSpectrumAsType::SpcAscii
           || format == SpecUtils::SaveSpectrumAsType::SpeIaea
           || format == SpecUtils::SaveSpectrumAsType::Cnf
+          || format == SpecUtils::SaveSpectrumAsType::Tka
          )
       {
         const vector< std::shared_ptr<const SpecUtils::Measurement> > meass = info.measurements();
@@ -1582,6 +1583,8 @@ int run_command_util( const int argc, char *argv[] )
             wrote = info.write_iaea_spe( output, samplenums, detnumset );
           else if( format == SpecUtils::SaveSpectrumAsType::Cnf )
             wrote = info.write_cnf( output, samplenums, detnumset );
+          else if( format == SpecUtils::SaveSpectrumAsType::Tka )
+            wrote = info.write_tka( output, samplenums, detnumset );
           else
           {
             assert( 0 );
@@ -1668,6 +1671,8 @@ int run_command_util( const int argc, char *argv[] )
                   wrote = info.write_iaea_spe( output, samplenums, detnumset );
                 else if( format == SpecUtils::SaveSpectrumAsType::Cnf )
                   wrote = info.write_cnf( output, samplenums, detnumset );
+                else if( format == SpecUtils::SaveSpectrumAsType::Tka )
+                  wrote = info.write_tka( output, samplenums, detnumset );
                 else
                   assert( 0 );
               
@@ -1926,6 +1931,7 @@ int run_command_util( const int argc, char *argv[] )
           case SpecUtils::SaveSpectrumAsType::SpeIaea:
           case SpecUtils::SaveSpectrumAsType::SpcAscii:
           case SpecUtils::SaveSpectrumAsType::Cnf:
+          case SpecUtils::SaveSpectrumAsType::Tka:
             assert( 0 );
           break;
         }//switch( format )
