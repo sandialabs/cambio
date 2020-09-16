@@ -14,6 +14,31 @@ using namespace std;
 using boost::filesystem::path;
 namespace bp = boost::process;
 
+int compareFiles(const std::string& p1, const std::string& p2) {
+	std::ifstream f1(p1);
+	std::ifstream f2(p2);
+
+	if (f1.fail() || f2.fail()) {
+		return false; //file problem
+	}
+
+	string line1, line2;
+	int lineCount = 0;
+	while (getline(f1, line1) && getline(f2, line2)) {
+		lineCount++;
+		if (line1 != line2) {
+			return lineCount;
+		}
+	}
+
+	if (getline(f1, line1) || getline(f2, line2)) {
+		// files have different numbers of lines, so flag that
+		return lineCount;
+	}
+
+	return -1;
+}
+
 int generateOutput(path inputFile, path inputTemplate, path outputFile) {
 
 	// This is built by the cambio project
@@ -177,31 +202,6 @@ int testTimesTemplate(path template_directory, path output_directory) {
 	return EXIT_SUCCESS;
 }
 
-int compareFiles(const std::string& p1, const std::string& p2) {
-	std::ifstream f1(p1);
-	std::ifstream f2(p2);
-
-	if (f1.fail() || f2.fail()) {
-		return false; //file problem
-	}
-
-	string line1, line2;
-	int lineCount = 0;
-	while (getline(f1, line1) && getline(f2, line2)) {
-		lineCount++;
-		if (line1 != line2) {
-			return lineCount;
-		}
-	}
-
-	if (getline(f1, line1) || getline(f2, line2)) {
-		// files have different numbers of lines, so flag that
-		return lineCount;
-	}
-
-	return -1;
-}
-
 int test_Aspect_MKC(path template_directory, path output_directory) {
 	cout << "TEST: Aspect MKC template ... ";
 
@@ -255,7 +255,6 @@ int test_AtomTex_6101C(path template_directory, path output_directory) {
 
 	return EXIT_SUCCESS;
 }
-
 
 int test_FLIRR400_2006(path template_directory, path output_directory) {
 	cout << "TEST: FLIR R400 2006 template ... ";
@@ -315,6 +314,36 @@ int test_FLIRR400_2012(path template_directory, path output_directory) {
 	return EXIT_SUCCESS;
 }
 
+int test_FLIRR425(path template_directory, path output_directory) {
+	cout << "TEST: FLIR R425 template ... ";
+
+	path expectedOutput = output_directory / path("FLIR R425 Spectra_599.n42");
+	path inputFile = template_directory / path("Test") / path("FLIR_R425") / path("Spectra_599.n42");
+
+	if (generateOutput(
+		inputFile,
+		template_directory / path("FLIR_R425") / path("TEMPLATE_Spectra_599.n42"),
+		expectedOutput) != 0)
+	{
+		return EXIT_FAILURE;
+	}
+
+	string absOutputPath = boost::filesystem::absolute(expectedOutput).string();
+	string absInputPath = boost::filesystem::absolute(inputFile).string();
+
+	int lineDiff = compareFiles(absInputPath, absOutputPath);
+	if (lineDiff >= 0) {
+
+		cout << "FAILED, files differ on line " << lineDiff << endl;
+		return EXIT_FAILURE;
+	}
+
+	cout << "SUCCESS" << endl;
+
+	return EXIT_SUCCESS;
+}
+
+
 int main(int argc, char** argv)
 {
 	cout << "Cambio Template Test Utility" << endl;
@@ -342,6 +371,7 @@ int main(int argc, char** argv)
 	failureCount += test_AtomTex_6101C(template_directory, output_directory); testCount++;
 	failureCount += test_FLIRR400_2006(template_directory, output_directory); testCount++;
 	failureCount += test_FLIRR400_2012(template_directory, output_directory); testCount++;
+	failureCount += test_FLIRR425(template_directory, output_directory); testCount++;
 
 	cout << endl;
 	cout << "Test Summary" << endl;
