@@ -488,6 +488,35 @@ int test_RadSeeker(path template_directory, path output_directory) {
 	return EXIT_SUCCESS;
 }
 
+int test_Symetrica_Verifinder(path template_directory, path output_directory) {
+	cout << "TEST: Symetrica Verifinder template ... ";
+
+	path expectedOutput = output_directory / path("Symetrica Verifinder Event_SN23N-190007_D20191125_T200611Z_E0586.n42");
+	path inputFile = template_directory / path("Test") / path("Symetrica_Verifinder") / path("Event_SN23N-190007_D20191125_T200611Z_E0586.n42");
+
+	if (generateOutput(
+		inputFile,
+		template_directory / path("Symetrica_Verifinder") / path("TEMPLATE_Event_SN23N-190007_D20191125_T200611Z_E0586.n42"),
+		expectedOutput) != 0)
+	{
+		return EXIT_FAILURE;
+	}
+
+	string absOutputPath = boost::filesystem::absolute(expectedOutput).string();
+	string absInputPath = boost::filesystem::absolute(inputFile).string();
+
+	int lineDiff = compareFiles(absInputPath, absOutputPath);
+	if (lineDiff >= 0) {
+
+		cout << "FAILED, files differ on line " << lineDiff << endl;
+		return EXIT_FAILURE;
+	}
+
+	cout << "SUCCESS" << endl;
+
+	return EXIT_SUCCESS;
+}
+
 int main(int argc, char** argv)
 {
 	cout << "Cambio Template Test Utility" << endl;
@@ -521,6 +550,7 @@ int main(int argc, char** argv)
 	failureCount += test_Ortec_RadEagleT_No_Intrinsic_Source(template_directory, output_directory); testCount++;
 	failureCount += test_Polimaster_1410(template_directory, output_directory); testCount++;
 	failureCount += test_RadSeeker(template_directory, output_directory); testCount++;
+	failureCount += test_Symetrica_Verifinder(template_directory, output_directory); testCount++;
 
 	cout << endl;
 	cout << "Test Summary" << endl;
