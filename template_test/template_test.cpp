@@ -372,6 +372,64 @@ int test_Ortec_Detective_X(path template_directory, path output_directory) {
 	return EXIT_SUCCESS;
 }
 
+int test_Ortec_RadEagleT_With_Intrinsic_Source(path template_directory, path output_directory) {
+	cout << "TEST: Ortec RadEagle T (w/ intrinsic source) template ... ";
+
+	path expectedOutput = output_directory / path("Ortec RadEagleT wSource 2019-11-25T12-50-11_161.n42");
+	path inputFile = template_directory / path("Test") / path("Ortec_RadEagleT") / path("with_intrinsic_source") / path("2019-11-25T12-50-11_161.n42");
+
+	if (generateOutput(
+		inputFile,
+		template_directory / path("Ortec_RadEagleT") / path("with_intrinsic_source") / path("TEMPLATE_2019-11-25T12-50-11_161.n42"),
+		expectedOutput) != 0)
+	{
+		return EXIT_FAILURE;
+	}
+
+	string absOutputPath = boost::filesystem::absolute(expectedOutput).string();
+	string absInputPath = boost::filesystem::absolute(inputFile).string();
+
+	int lineDiff = compareFiles(absInputPath, absOutputPath);
+	if (lineDiff >= 0) {
+
+		cout << "FAILED, files differ on line " << lineDiff << endl;
+		return EXIT_FAILURE;
+	}
+
+	cout << "SUCCESS" << endl;
+
+	return EXIT_SUCCESS;
+}
+
+int test_Ortec_RadEagleT_No_Intrinsic_Source(path template_directory, path output_directory) {
+	cout << "TEST: Ortec RadEagle T (NO intrinsic source) template ... ";
+
+	path expectedOutput = output_directory / path("Ortec RadEagleT No Source 2019-11-25T12-15-44_223.n42");
+	path inputFile = template_directory / path("Test") / path("Ortec_RadEagleT") / path("No_intrinsic_source") / path("2019-11-25T12-15-44_223.n42");
+
+	if (generateOutput(
+		inputFile,
+		template_directory / path("Ortec_RadEagleT") / path("No_intrinsic_source") / path("TEMPLATE_2019-11-25T12-15-44_223.n42"),
+		expectedOutput) != 0)
+	{
+		return EXIT_FAILURE;
+	}
+
+	string absOutputPath = boost::filesystem::absolute(expectedOutput).string();
+	string absInputPath = boost::filesystem::absolute(inputFile).string();
+
+	int lineDiff = compareFiles(absInputPath, absOutputPath);
+	if (lineDiff >= 0) {
+
+		cout << "FAILED, files differ on line " << lineDiff << endl;
+		return EXIT_FAILURE;
+	}
+
+	cout << "SUCCESS" << endl;
+
+	return EXIT_SUCCESS;
+}
+
 int main(int argc, char** argv)
 {
 	cout << "Cambio Template Test Utility" << endl;
@@ -401,6 +459,8 @@ int main(int argc, char** argv)
 	failureCount += test_FLIRR400_2012(template_directory, output_directory); testCount++;
 	failureCount += test_FLIRR425(template_directory, output_directory); testCount++;
 	failureCount += test_Ortec_Detective_X(template_directory, output_directory); testCount++;
+	failureCount += test_Ortec_RadEagleT_With_Intrinsic_Source(template_directory, output_directory); testCount++;
+	failureCount += test_Ortec_RadEagleT_No_Intrinsic_Source(template_directory, output_directory); testCount++;
 
 	cout << endl;
 	cout << "Test Summary" << endl;
