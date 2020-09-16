@@ -343,6 +343,34 @@ int test_FLIRR425(path template_directory, path output_directory) {
 	return EXIT_SUCCESS;
 }
 
+int test_Ortec_Detective_X(path template_directory, path output_directory) {
+	cout << "TEST: Ortec Detective X template ... ";
+
+	path expectedOutput = output_directory / path("Ortec Detective X 0001220_2018_03_08_23_24_200.n42");
+	path inputFile = template_directory / path("Test") / path("Ortec_Detective_X") / path("0001220_2018_03_08_23_24_200.n42");
+
+	if (generateOutput(
+		inputFile,
+		template_directory / path("Ortec_Detective_X") / path("TEMPLATE_0001220_2018_03_08_23_24_200.n42"),
+		expectedOutput) != 0)
+	{
+		return EXIT_FAILURE;
+	}
+
+	string absOutputPath = boost::filesystem::absolute(expectedOutput).string();
+	string absInputPath = boost::filesystem::absolute(inputFile).string();
+
+	int lineDiff = compareFiles(absInputPath, absOutputPath);
+	if (lineDiff >= 0) {
+
+		cout << "FAILED, files differ on line " << lineDiff << endl;
+		return EXIT_FAILURE;
+	}
+
+	cout << "SUCCESS" << endl;
+
+	return EXIT_SUCCESS;
+}
 
 int main(int argc, char** argv)
 {
@@ -372,6 +400,7 @@ int main(int argc, char** argv)
 	failureCount += test_FLIRR400_2006(template_directory, output_directory); testCount++;
 	failureCount += test_FLIRR400_2012(template_directory, output_directory); testCount++;
 	failureCount += test_FLIRR425(template_directory, output_directory); testCount++;
+	failureCount += test_Ortec_Detective_X(template_directory, output_directory); testCount++;
 
 	cout << endl;
 	cout << "Test Summary" << endl;
