@@ -459,6 +459,35 @@ int test_Polimaster_1410(path template_directory, path output_directory) {
 	return EXIT_SUCCESS;
 }
 
+int test_RadSeeker(path template_directory, path output_directory) {
+	cout << "TEST: RadSeeker template ... ";
+
+	path expectedOutput = output_directory / path("RadSeeker_CS_76886_D20180308_T145826_E1227_U.n42");
+	path inputFile = template_directory / path("Test") / path("RadSeeker") / path("RadSeeker_CS_76886_D20180308_T145826_E1227_U.n42");
+
+	if (generateOutput(
+		inputFile,
+		template_directory / path("RadSeeker") / path("TEMPLATE_RadSeeker_CS_76886_D20180308_T145826_E1227_U.n42"),
+		expectedOutput) != 0)
+	{
+		return EXIT_FAILURE;
+	}
+
+	string absOutputPath = boost::filesystem::absolute(expectedOutput).string();
+	string absInputPath = boost::filesystem::absolute(inputFile).string();
+
+	int lineDiff = compareFiles(absInputPath, absOutputPath);
+	if (lineDiff >= 0) {
+
+		cout << "FAILED, files differ on line " << lineDiff << endl;
+		return EXIT_FAILURE;
+	}
+
+	cout << "SUCCESS" << endl;
+
+	return EXIT_SUCCESS;
+}
+
 int main(int argc, char** argv)
 {
 	cout << "Cambio Template Test Utility" << endl;
@@ -491,6 +520,7 @@ int main(int argc, char** argv)
 	failureCount += test_Ortec_RadEagleT_With_Intrinsic_Source(template_directory, output_directory); testCount++;
 	failureCount += test_Ortec_RadEagleT_No_Intrinsic_Source(template_directory, output_directory); testCount++;
 	failureCount += test_Polimaster_1410(template_directory, output_directory); testCount++;
+	failureCount += test_RadSeeker(template_directory, output_directory); testCount++;
 
 	cout << endl;
 	cout << "Test Summary" << endl;
