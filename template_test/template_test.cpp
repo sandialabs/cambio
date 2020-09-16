@@ -517,6 +517,35 @@ int test_Symetrica_Verifinder(path template_directory, path output_directory) {
 	return EXIT_SUCCESS;
 }
 
+int test_Thermo_RIIDEye(path template_directory, path output_directory) {
+	cout << "TEST: Thermo RIIDEye template ... ";
+
+	path expectedOutput = output_directory / path("Thermo SPEC0654.N42");
+	path inputFile = template_directory / path("Test") / path("Thermo_RIIDEyeX") / path("SPEC0654.N42");
+
+	if (generateOutput(
+		inputFile,
+		template_directory / path("Thermo_RIIDEyeX") / path("TEMPLATE_SPEC0654.N42"),
+		expectedOutput) != 0)
+	{
+		return EXIT_FAILURE;
+	}
+
+	string absOutputPath = boost::filesystem::absolute(expectedOutput).string();
+	string absInputPath = boost::filesystem::absolute(inputFile).string();
+
+	int lineDiff = compareFiles(absInputPath, absOutputPath);
+	if (lineDiff >= 0) {
+
+		cout << "FAILED, files differ on line " << lineDiff << endl;
+		return EXIT_FAILURE;
+	}
+
+	cout << "SUCCESS" << endl;
+
+	return EXIT_SUCCESS;
+}
+
 int main(int argc, char** argv)
 {
 	cout << "Cambio Template Test Utility" << endl;
@@ -550,7 +579,8 @@ int main(int argc, char** argv)
 	failureCount += test_Ortec_RadEagleT_No_Intrinsic_Source(template_directory, output_directory); testCount++;
 	failureCount += test_Polimaster_1410(template_directory, output_directory); testCount++;
 	failureCount += test_RadSeeker(template_directory, output_directory); testCount++;
-	failureCount += test_Symetrica_Verifinder(template_directory, output_directory); testCount++;
+	failureCount += test_Symetrica_Verifinder(template_directory, output_directory); testCount++; // Note this one has like a billion spectra in it, only did the first few...
+	failureCount += test_Thermo_RIIDEye(template_directory, output_directory); testCount++;
 
 	cout << endl;
 	cout << "Test Summary" << endl;
