@@ -513,8 +513,10 @@ int run_command_util( const int argc, char *argv[] )
   vector<string> inputfiles;
   
   string newserialnum, newdettype;
-  
+
+#if( SpecUtils_INJA_TEMPLATES )
   string template_file;
+#endif
 
   po::options_description cl_desc("Allowed options");
   cl_desc.add_options()
@@ -549,9 +551,11 @@ int run_command_util( const int argc, char *argv[] )
      " specified. Options specified on the command line are combined with"
      " options given in the INI file.  Most options can only be specified once."
     )
+#if( SpecUtils_INJA_TEMPLATES )
     ("template-file", po::value<string>(&template_file),
         "Filesystem path of the template file to use (overrides --format option)."
     )
+#endif
     ("inputdir", po::value<string>(&inputdir),
      "Input directory.  All files in specified directory will (try to) be"
      " converted.\n"
@@ -986,11 +990,13 @@ int run_command_util( const int argc, char *argv[] )
   
   SpecUtils::SaveSpectrumAsType format = str_to_save_type[outputformatstr];
   
+#if( SpecUtils_INJA_TEMPLATES )
   if (!template_file.empty()) 
   {
       // Assume template format if template file is provided
       format = SpecUtils::SaveSpectrumAsType::Template;
   }
+#endif
   
   assert( num_OutputMetaInfoDetectorNames == NumOutputMetaInfoDetectorType );
   OutputMetaInfoDetectorType metatype = NumOutputMetaInfoDetectorType;
@@ -1108,6 +1114,7 @@ int run_command_util( const int argc, char *argv[] )
   }//if( format == kD3HtmlSpectrumFile )
 #endif
 
+#if( SpecUtils_INJA_TEMPLATES )
   if (format == SpecUtils::SaveSpectrumAsType::Template) 
   {
       // We already check above that template_file is not empty
@@ -1119,7 +1126,8 @@ int run_command_util( const int argc, char *argv[] )
           SpecUtils::to_lower_ascii(ending);
       }
   }
-  
+#endif
+
   vector<string> renamed_dets;
   map<string,string> det_renames;
   for( const string &detrename : detector_renaimings )
@@ -1936,10 +1944,11 @@ int run_command_util( const int argc, char *argv[] )
           }
 #endif  //#if( SpecUtils_ENABLE_D3_CHART )
             
+#if( SpecUtils_INJA_TEMPLATES )
           case SpecUtils::SaveSpectrumAsType::Template:
             wrote = info.write_template(output, template_file);
             break;
-
+#endif
           case SpecUtils::SaveSpectrumAsType::Chn:
           case SpecUtils::SaveSpectrumAsType::SpcBinaryInt:
           case SpecUtils::SaveSpectrumAsType::SpcBinaryFloat:
