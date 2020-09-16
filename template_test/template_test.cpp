@@ -430,6 +430,35 @@ int test_Ortec_RadEagleT_No_Intrinsic_Source(path template_directory, path outpu
 	return EXIT_SUCCESS;
 }
 
+int test_Polimaster_1410(path template_directory, path output_directory) {
+	cout << "TEST: Polimaster 1410 template ... ";
+
+	path expectedOutput = output_directory / path("Polimaster 1410 201803080064.spe");
+	path inputFile = template_directory / path("Test") / path("Polimaster_1410") / path("201803080064.spe");
+
+	if (generateOutput(
+		inputFile,
+		template_directory / path("Polimaster_1410") / path("TEMPLATE_201803080064.spe"),
+		expectedOutput) != 0)
+	{
+		return EXIT_FAILURE;
+	}
+
+	string absOutputPath = boost::filesystem::absolute(expectedOutput).string();
+	string absInputPath = boost::filesystem::absolute(inputFile).string();
+
+	int lineDiff = compareFiles(absInputPath, absOutputPath);
+	if (lineDiff >= 0) {
+
+		cout << "FAILED, files differ on line " << lineDiff << endl;
+		return EXIT_FAILURE;
+	}
+
+	cout << "SUCCESS" << endl;
+
+	return EXIT_SUCCESS;
+}
+
 int main(int argc, char** argv)
 {
 	cout << "Cambio Template Test Utility" << endl;
@@ -461,6 +490,7 @@ int main(int argc, char** argv)
 	failureCount += test_Ortec_Detective_X(template_directory, output_directory); testCount++;
 	failureCount += test_Ortec_RadEagleT_With_Intrinsic_Source(template_directory, output_directory); testCount++;
 	failureCount += test_Ortec_RadEagleT_No_Intrinsic_Source(template_directory, output_directory); testCount++;
+	failureCount += test_Polimaster_1410(template_directory, output_directory); testCount++;
 
 	cout << endl;
 	cout << "Test Summary" << endl;
