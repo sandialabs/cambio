@@ -1226,7 +1226,7 @@ int run_command_util( const int argc, char *argv[] )
           if( record_type == type )
           {
             ++nremoved;
-            info.remove_measurment( m, false );
+            info.remove_measurement( m, false );
           }
         }//for( loop over measurements )
         
@@ -1265,8 +1265,8 @@ int run_command_util( const int argc, char *argv[] )
         std::shared_ptr<SpecUtils::Measurement> summed_meas = info.sum_measurements( sample_num, det_to_use);
         vector<shared_ptr<const SpecUtils::Measurement>> meass = info.measurements();
         for( shared_ptr<const SpecUtils::Measurement> &m : meass )
-          info.remove_measurment( m, false );
-        info.add_measurment( summed_meas, true );
+          info.remove_measurement( m, false );
+        info.add_measurement( summed_meas, true );
         try
         {
           info.cleanup_after_load();

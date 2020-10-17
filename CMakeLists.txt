@@ -227,7 +227,7 @@ if( BUILD_CAMBIO_GUI )
 	  #target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\lib\\Qt5PrintSupport.lib"  )
 	  #target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\plugins\\printsupport\\windowsprintersupport.lib"  )
 
-    target_link_libraries( ${PROJECT_NAME} PRIVATE "imm32.lib" "Ws2_32.lib" "winmm.lib" "Mincore.lib" "Dwmapi.lib" "Wtsapi32.lib" )
+    target_link_libraries( ${PROJECT_NAME} PRIVATE "imm32.lib" "Ws2_32.lib" "winmm.lib" "Mincore.lib" "Dwmapi.lib" "Wtsapi32.lib" "Pathcch.lib" "Shlwapi.lib" )
   else()
     link_directories( ${MyQT_DIR}/lib )
     link_directories( ${MyQT_DIR}/plugins/platforms )

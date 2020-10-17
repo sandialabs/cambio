@@ -24,6 +24,10 @@
 #include "cambio/CommandLineUtil.h"
 #endif
 
+#ifdef _WIN32
+#include "SpecUtils/StringAlgo.h"
+#endif
+
 #if( BUILD_CAMBIO_GUI )
 #include "cambio/CambioApp.h"
 
