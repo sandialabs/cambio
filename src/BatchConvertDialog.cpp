@@ -74,6 +74,8 @@ namespace
       case SaveSpectrumAsType::ExploraniumGr130v0: return "GR130 DAT";
       case SaveSpectrumAsType::ExploraniumGr135v2: return "GR135 DAT";
       case SaveSpectrumAsType::SpeIaea:            return "IAEA SPE";
+      case SaveSpectrumAsType::Cnf:                return "Canberra CNF";
+      case SaveSpectrumAsType::Tka:                return "TKA";
 #if( SpecUtils_ENABLE_D3_CHART )
       case SaveSpectrumAsType::HtmlD3:             return "HTML";
 #endif
@@ -439,26 +441,9 @@ void BatchConvertDialog::convert()
     if( pos > 0 )
       out = out.left( pos );
       
-    switch( type )
-    {
-      case SpecUtils::SaveSpectrumAsType::Txt:                out += ".txt"; break;
-      case SpecUtils::SaveSpectrumAsType::Csv:                out += ".csv"; break;
-      case SpecUtils::SaveSpectrumAsType::Pcf:                out += ".pcf"; break;
-      case SpecUtils::SaveSpectrumAsType::N42_2006:                out += ".n42"; break;
-      case SpecUtils::SaveSpectrumAsType::N42_2012:            out += ".n42"; break;
-      case SpecUtils::SaveSpectrumAsType::Chn:                out += ".chn"; break;
-      case SpecUtils::SaveSpectrumAsType::SpcAscii:           out += ".spc"; break;
-      case SpecUtils::SaveSpectrumAsType::ExploraniumGr130v0: out += ".dat"; break;
-      case SpecUtils::SaveSpectrumAsType::ExploraniumGr135v2: out += ".dat"; break;
-      case SpecUtils::SaveSpectrumAsType::SpeIaea:            out += ".dat"; break;
-#if( SpecUtils_ENABLE_D3_CHART )
-      case SpecUtils::SaveSpectrumAsType::HtmlD3:             out += ".html"; break;
-#endif
-      case SpecUtils::SaveSpectrumAsType::SpcBinaryInt:
-      case SpecUtils::SaveSpectrumAsType::SpcBinaryFloat:
-        out += ".spc"; break;
-      case SpecUtils::SaveSpectrumAsType::NumTypes:           break;
-    }//switch( type )
+    
+    out += ".";
+    out += SpecUtils::suggestedNameEnding(type);
     
     outputInfo = QFileInfo( out );
 
@@ -561,6 +546,8 @@ void BatchConvertDialog::convert()
       case SpecUtils::SaveSpectrumAsType::SpcBinaryFloat:
       case SpecUtils::SaveSpectrumAsType::SpcAscii:
       case SpecUtils::SaveSpectrumAsType::SpeIaea:
+      case SpecUtils::SaveSpectrumAsType::Cnf:
+      case SpecUtils::SaveSpectrumAsType::Tka:
 #if( SpecUtils_ENABLE_D3_CHART )
       case SpecUtils::SaveSpectrumAsType::HtmlD3:
 #endif
@@ -568,6 +555,8 @@ void BatchConvertDialog::convert()
         int nwroteone = 0;
         const std::set<int> samplenums = meas.sample_numbers();
         const std::vector<int> detnums = meas.detector_numbers();
+        const std::vector<std::string> detnames = meas.detector_names();
+        assert( detnums.size() == detnames.size() );
         
         foreach( const int sample, samplenums )
         {
@@ -576,6 +565,11 @@ void BatchConvertDialog::convert()
             std::set<int> detnumset, samplenumset;
             detnumset.insert( detnum );
             samplenumset.insert( sample );
+            
+            const auto detnumpos = std::find(std::begin(detnums), std::end(detnums), detnum)
+                                   - std::begin(detnums);
+            std::vector<std::string> detname( 1, detnames[detnumpos] );
+            
             
             QString extention;
             QString outname = out;
@@ -617,9 +611,13 @@ void BatchConvertDialog::convert()
                 wrote = meas.write_ascii_spc( output, samplenumset, detnumset );
               else if( type == SpecUtils::SaveSpectrumAsType::SpeIaea )
                 wrote = meas.write_iaea_spe( output, samplenumset, detnumset );
+              else if( type == SpecUtils::SaveSpectrumAsType::Cnf )
+                wrote = meas.write_cnf( output, samplenumset, detnumset );
+              else if( type == SpecUtils::SaveSpectrumAsType::Tka )
+                wrote = meas.write_tka( output, samplenumset, detnumset );
 #if( SpecUtils_ENABLE_D3_CHART )
               else if( type == SpecUtils::SaveSpectrumAsType::HtmlD3 )
-                  wrote = meas.write_d3_html( output, D3SpectrumExport::D3SpectrumChartOptions{}, samplenumset, detnumset );
+                  wrote = meas.write_d3_html( output, D3SpectrumExport::D3SpectrumChartOptions{}, samplenumset, detname );
 #endif
               else
                 assert( 0 );

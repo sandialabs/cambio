@@ -79,6 +79,8 @@ const char *description( const SaveSpectrumAsType type )
     case SaveSpectrumAsType::ExploraniumGr130v0:    return "GR130 DAT";
     case SaveSpectrumAsType::ExploraniumGr135v2:    return "GR135 DAT";
     case SaveSpectrumAsType::SpeIaea:               return "SPE IAEA";
+    case SaveSpectrumAsType::Cnf:                   return "Canberra CNF";
+    case SaveSpectrumAsType::Tka:                   return "TKA";
 #if( SpecUtils_ENABLE_D3_CHART )
     case SaveSpectrumAsType::HtmlD3:                return "HTML";
 #endif
@@ -95,8 +97,15 @@ bool writeIndividualHtmlSpectraToOutputFile( std::ofstream &output,
 {
   set<int> detnums;
   const std::vector<int> &detnumsvect = meas.detector_numbers();
+  const std::vector<std::string> &detnames = meas.detector_names();
   detnums.insert( detnumsvect.begin(), detnumsvect.end() );
 
+  assert( detectors.size() == detnames.size() );
+  std::vector<std::string> detstouse;
+  for( size_t i = 0; i < detectors.size() && i < detnames.size(); ++i )
+    if( detectors[i] )
+      detstouse.push_back( detnames[i] );
+  
 //#warning "Saving to HTML files could use some work.\nIf its a passthrough file and all spectra are being saved, and theres a background, then it should be a seperate line.  Similar thing for other files"
   
   const char *endline = "\r\n";
@@ -123,7 +132,7 @@ bool writeIndividualHtmlSpectraToOutputFile( std::ofstream &output,
     output << "<script>" << endline;
     D3SpectrumExport::write_js_for_chart( output, div_id, title, "Energy (keV)", "Counts" );
     
-    auto m = meas.sum_measurements( set<int>{sample}, detectors );
+    auto m = meas.sum_measurements( set<int>{sample}, detstouse, nullptr );
     
     if( !m )
       continue;
@@ -288,6 +297,13 @@ bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
     detnums.insert( meas->detector_numbers()[0] );
   }
   
+  const std::vector<std::string> &detnames = meas->detector_names();
+  assert( detectors.size() == detnames.size() );
+  std::vector<std::string> detstouse;
+  for( size_t i = 0; i < detectors.size() && i < detnames.size(); ++i )
+    if( detectors[i] )
+      detstouse.push_back( detnames[i] );
+  
   
   if( detnums.empty() )
   {
@@ -321,7 +337,7 @@ bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
 #endif
     {
       std::shared_ptr<SpecUtils::Measurement> m
-                              = meas->sum_measurements( samplenums, detectors );
+                              = meas->sum_measurements( samplenums, detstouse, nullptr );
       
       if( !m )
       {
@@ -333,8 +349,8 @@ bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
         
         if( info.measurements().size() > 1 )
         {
-          info.remove_measurments( info.measurements() );
-          info.add_measurment( m, true );
+          info.remove_measurements( info.measurements() );
+          info.add_measurement( m, true );
         }//if( info.measurements().size() > 1 )
         
         switch( format )
@@ -368,6 +384,8 @@ bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
           case SaveSpectrumAsType::NumTypes:
           case SaveSpectrumAsType::SpeIaea:
           case SaveSpectrumAsType::SpcAscii:
+          case SaveSpectrumAsType::Cnf:
+          case SaveSpectrumAsType::Tka:
             break;
         }//switch( type )
       }//if( !m ) / else
@@ -402,6 +420,18 @@ bool writeSumOfSpectraToOutputFile( const SaveSpectrumAsType format,
     case SaveSpectrumAsType::SpeIaea:
     {
       ok = meas->write_iaea_spe( output, samplenums, detnums );
+      break;
+    }
+      
+    case SaveSpectrumAsType::Cnf:
+    {
+      ok = meas->write_cnf( output, samplenums, detnums );
+      break;
+    }
+      
+    case SaveSpectrumAsType::Tka:
+    {
+      ok = meas->write_tka( output, samplenums, detnums );
       break;
     }
       
@@ -481,7 +511,7 @@ bool writeIndividualSpectraToOutputFile( const SaveSpectrumAsType format,
       }
     }//foreach( std::shared_ptr<const SpecUtils::Measurement> oldm, info.measurements() )
     
-    info.remove_measurments( toremove );
+    info.remove_measurements( toremove );
     
     
     if( info.measurements().empty() )
@@ -552,6 +582,8 @@ bool writeIndividualSpectraToOutputFile( const SaveSpectrumAsType format,
     case SaveSpectrumAsType::SpcBinaryFloat:
     case SaveSpectrumAsType::SpcAscii:
     case SaveSpectrumAsType::SpeIaea:
+    case SaveSpectrumAsType::Cnf:
+    case SaveSpectrumAsType::Tka:
     {
       if( samplenums.size()==1 && detectors.size()==1 )
       {
@@ -567,6 +599,10 @@ bool writeIndividualSpectraToOutputFile( const SaveSpectrumAsType format,
           ok = info.write_ascii_spc( output, samplenums, detnums );
         else if( format == SaveSpectrumAsType::SpeIaea )
           ok = info.write_iaea_spe( output, samplenums, detnums );
+        else if( format == SaveSpectrumAsType::Cnf )
+          ok = info.write_cnf( output, samplenums, detnums );
+        else if( format == SaveSpectrumAsType::Tka )
+          ok = info.write_tka( output, samplenums, detnums );
         else
           assert( 0 );
       }else
@@ -923,6 +959,8 @@ void SaveWidget::save()
       || type == SaveSpectrumAsType::SpcBinaryFloat
       || type == SaveSpectrumAsType::SpcAscii
       || type == SaveSpectrumAsType::SpeIaea
+      || type == SaveSpectrumAsType::Cnf
+      || type == SaveSpectrumAsType::Tka
      )
   {
     const int id = m_saveToSingleSpecFileGroup->checkedId();
@@ -1121,7 +1159,7 @@ void SaveWidget::save()
       {
         auto info = std::make_shared<SpecUtils::SpecFile>( *m_measurment );
         
-        const vector<bool> all_dets( m_measurment->detector_numbers().size(), true );
+        const vector<string> &detnames = m_measurment->detector_names();
         const set<int> sample_nums = m_measurment->sample_numbers();
         
         vector<std::shared_ptr<SpecUtils::Measurement>> samplemeas;
@@ -1130,15 +1168,15 @@ void SaveWidget::save()
         {
           set<int> num;
           num.insert( sample );
-          auto m = m_measurment->sum_measurements( num, all_dets );
+          auto m = m_measurment->sum_measurements( num, detnames, nullptr );
           if( m )
             samplemeas.push_back( m );
         }//foreach( const int sample, sample_nums )
         
-        info->remove_measurments( info->measurements() );
+        info->remove_measurements( info->measurements() );
         
         for( auto m : samplemeas )
-          info->add_measurment( m, false );
+          info->add_measurement( m, false );
         info->cleanup_after_load(); //necassarry
         
         if( info->measurements().size() )
@@ -1463,6 +1501,26 @@ void SaveWidget::formatChanged()
              " time, real time, energy calibration, comments, and title."
              " Deviation pairs, gps, model, and other meta information will"
              " be lost";
+      break;
+      
+      case SaveSpectrumAsType::Cnf:
+      if( currname.size() )
+        currname += ".cnf";
+      m_saveToMultiSpecFile->hide();
+      m_saveToSingleSpecFile->show();
+      desc = "Canberra CNF files are binary single spectrum files.\n"
+             "Saving to this format preserves start time, live time, real time, energy calibration, and gps coordinates."
+             " Neutron counts, deviation pairs, model, RIID results, and other meta information will be lost";
+      break;
+      
+      case SaveSpectrumAsType::Tka:
+      if( currname.size() )
+        currname += ".TKA";
+      m_saveToMultiSpecFile->hide();
+      m_saveToSingleSpecFile->show();
+      desc = "Canberra Toolkit file.\n"
+             "Saving to this format preserves live time, real time, and gamma channel counts;"
+             " neutron counts, energy calibration, meta-data, and other information is lost.";
       break;
       
 #if( SpecUtils_ENABLE_D3_CHART )

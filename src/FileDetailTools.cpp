@@ -647,18 +647,32 @@ EnergyCalDialog::~EnergyCalDialog()
   
 void EnergyCalDialog::removeCal()
 {
+  using SpecUtils::EnergyCalibration;
+  
   std::shared_ptr<SpecUtils::SpecFile> meas = m_parent->m_measurment;
 
   //std::vector< std::shared_ptr<const SpecUtils::Measurement> > meass = m_parent->m_measurment->measurements();
   if( !meas )
     return;
 
-  std::vector<float> eqn;
-  eqn.push_back( 0.0f );
-  eqn.push_back( 1.0f );
-  std::vector<std::pair<float,float>> dev_pairs;
-  meas->recalibrate_by_eqn( eqn, dev_pairs, SpecUtils::EnergyCalType::Polynomial );
-
+  map<size_t, shared_ptr<const EnergyCalibration> > cals;
+  for( auto m : meas->measurements() )
+  {
+    const size_t nchannel = m ? m->num_gamma_channels() : 0;
+    if( nchannel < 5 )
+      continue;
+    
+    auto pos = cals.find( nchannel );
+    if( pos == end(cals) )
+    {
+      auto cal = make_shared<SpecUtils::EnergyCalibration>();
+      cal->set_polynomial( nchannel, {0.0f, 1.0f}, {} );
+      pos = cals.insert( {nchannel,const_pointer_cast<const EnergyCalibration>(cal)} ).first;
+    }
+    
+    meas->set_energy_calibration( pos->second, m );
+  }//for( auto m : meas->measurements() )
+  
   m_parent->energyCalUpdated( meas );
 
   QMessageBox msgBox;
