@@ -55,6 +55,9 @@
 #include "cambio/BatchConvertDialog.h"
 #include "SpecUtils/D3SpectrumExport.h"
 
+#ifdef _WIN32
+#include "SpecUtils/StringAlgo.h"
+#endif
 
 using namespace std;
 using SpecUtils::SaveSpectrumAsType;
