@@ -77,7 +77,7 @@ namespace
       case SaveSpectrumAsType::ExploraniumGr135v2: return "GR135 DAT";
       case SaveSpectrumAsType::SpeIaea:            return "IAEA SPE";
       case SaveSpectrumAsType::Cnf:                return "Canberra CNF";
-      case SaveSpectrumAsType::Tka:                return "TKA";
+      case SaveSpectrumAsType::Tka:                return "Canberra TKA";
 #if( SpecUtils_ENABLE_D3_CHART )
       case SaveSpectrumAsType::HtmlD3:             return "HTML";
 #endif
@@ -211,9 +211,9 @@ BatchConvertDialog::BatchConvertDialog( QWidget * parent, Qt::WindowFlags f )
 
   QSettings settings;
   QVariant var = settings.value( "SaveFileDir" );
-  const QString val = var.isValid() ? var.toString() : QString("");
-  if( val.size()>2 && QDir(val).exists() )
-	m_saveToPath->setText( val );
+  //const QString val = var.isValid() ? var.toString() : QString("");
+  //if( val.size()>2 && QDir(val).exists() )
+	//m_saveToPath->setText( val );
 
 
   QPushButton *browse = new QPushButton( "Browse..." );
@@ -336,6 +336,9 @@ void BatchConvertDialog::setDirectory( const QString &path )
     selectionmodel->select( index, QItemSelectionModel::Select );
     m_filesystemView->scrollTo( index, QAbstractItemView::EnsureVisible );
   }
+
+  if( dir.exists() )
+    m_saveToPath->setText( dir.absolutePath() );
 }//void setDirectory( const QString &path )
 
 
@@ -354,12 +357,36 @@ void BatchConvertDialog::setFiles( const QList<QString> &files )
     m_filesystemView->scrollTo( index, QAbstractItemView::EnsureVisible );
   }
   
-  QDir savedir( m_saveToPath->text() );
-  if( files.size() && (!savedir.exists() || !savedir.isReadable()) )
+  
+  //Set the save path to be the same as the input files.
+  if( m_saveToPath->text().isEmpty() )
   {
-    QFileInfo info( files[files.size()-1] );
-    m_saveToPath->setText( info.path() );
-  }//if( files.size() )
+    std::set<QString> paths;
+    for( int i = 0; i < files.size(); ++i )
+    {
+      QFileInfo info( files[i] );
+      if( info.exists() )
+        paths.insert( info.path() );
+    }
+    if( paths.size() == 1 )
+    {
+      //  \TODO: check if parent directory is a sub-path of m_saveToPath->text(), and if so, dont change things
+      m_saveToPath->setText( *paths.begin() );
+    }else
+    {
+      QSettings settings;
+      QVariant var = settings.value( "SaveFileDir" );
+      const QString val = var.isValid() ? var.toString() : QString( "" );
+      if( val.size() > 2 && QDir( val ).exists() )
+      {
+        m_saveToPath->setText( val );
+      }else if( files.size() )
+      {
+        QFileInfo info( files[files.size() - 1] );
+        m_saveToPath->setText( info.path() );
+      }
+    }//if( all input files have one parent path ) / else
+  }//if( m_saveToPath->text().isEmpty() )
 }//void setFiles( const QList<QString> &files )
 
 
@@ -518,6 +545,12 @@ void BatchConvertDialog::convert()
         auto output = open_output_file( outname );
         if( output )
           ok = meas.write_txt( *output );
+
+        if( !ok )
+          failed.push_back( "Possibly failed writing '" + out + "'" );
+        else
+          converted.push_back( out );
+
         break;
       }//case SpecUtils::SaveSpectrumAsType::Txt:
 
@@ -526,6 +559,12 @@ void BatchConvertDialog::convert()
         auto output = open_output_file( outname );
         if( output )
           ok = meas.write_csv( *output );
+
+        if( !ok )
+          failed.push_back( "Possibly failed writing '" + out + "'" );
+        else
+          converted.push_back( out );
+
         break;
       }//case SpecUtils::SaveSpectrumAsType::Csv:
 
@@ -534,6 +573,12 @@ void BatchConvertDialog::convert()
         auto output = open_output_file( outname );
         if( output )
           ok = meas.write_pcf( *output );
+
+        if( !ok )
+          failed.push_back( "Possibly failed writing '" + out + "'" );
+        else
+          converted.push_back( out );
+
         break;
       }//case SpecUtils::SaveSpectrumAsType::Pcf:
 
@@ -542,6 +587,12 @@ void BatchConvertDialog::convert()
         auto output = open_output_file( outname );
         if( output )
           ok = meas.write_2006_N42( *output );
+
+        if( !ok )
+          failed.push_back( "Possibly failed writing '" + out + "'" );
+        else
+          converted.push_back( out );
+
         break;
       }//case SpecUtils::SaveSpectrumAsType::N42_2006:
 
@@ -550,6 +601,12 @@ void BatchConvertDialog::convert()
         auto output = open_output_file( outname );
         if( output )
           ok = meas.write_2012_N42( *output );
+
+        if( !ok )
+          failed.push_back( "Possibly failed writing '" + out + "'" );
+        else
+          converted.push_back( out );
+
         break;
       }//case SpecUtils::SaveSpectrumAsType::N42_2012:
 
@@ -558,6 +615,12 @@ void BatchConvertDialog::convert()
         auto output = open_output_file( outname );
         if( output )
           ok = meas.write_binary_exploranium_gr130v0( *output );
+
+        if( !ok )
+          failed.push_back( "Possibly failed writing '" + out + "'" );
+        else
+          converted.push_back( out );
+
         break;
       }//case SpecUtils::SaveSpectrumAsType::ExploraniumGr130v0:
 
@@ -566,6 +629,12 @@ void BatchConvertDialog::convert()
         auto output = open_output_file( outname );
         if( output )
           ok = meas.write_binary_exploranium_gr135v2( *output );
+
+        if( !ok )
+          failed.push_back( "Possibly failed writing '" + out + "'" );
+        else
+          converted.push_back( out );
+
         break;
       }//case SpecUtils::SaveSpectrumAsType::ExploraniumGr135v2:
 
@@ -598,7 +667,11 @@ void BatchConvertDialog::convert()
                                    - std::begin(detnums);
             std::vector<std::string> detname( 1, detnames[detnumpos] );
             
-            
+            // Make sure we actually have this measurement, before continuing
+            auto m = meas.measurement( sample, detnames[detnumpos] );
+            if( !m )
+              continue;
+
             QString extention;
             QString outname = out;
             
@@ -662,10 +735,6 @@ void BatchConvertDialog::convert()
         break;
     }//switch( type )
     
-    if( !ok )
-      failed.push_back( "Possibly failed writing '" + out + "'" );
-    else
-      converted.push_back( out );
 
 	if( progress.wasCanceled() )
 	  break;

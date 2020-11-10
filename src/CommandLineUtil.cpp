@@ -1290,7 +1290,7 @@ int run_command_util( const int argc, char *argv[] )
           if( nchann < 2 )
             continue;
           
-          const size_t ncombine = std::pow( 2, (rebin_factor-1) );
+          const size_t ncombine = static_cast<size_t>( std::pow( 2, (rebin_factor-1) ) );
           if( (nchann % ncombine) != 0 )
           {
             cerr << "Not rebinning spectra with " << nchann << " as " << nchann
@@ -1628,7 +1628,7 @@ int run_command_util( const int argc, char *argv[] )
                 
                 char buffer[32];
                 snprintf( buffer, sizeof(buffer), "%d", nwroteone );
-                int nchar = strlen(buffer);
+                size_t nchar = strlen(buffer);
                 while( nchar++ < 4 )  //VS2012 doesnt support %4d format flag
                   outname += "0";
                 outname += buffer;
