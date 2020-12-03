@@ -906,23 +906,20 @@ void SpectrumView::mouseMoveEvent( QMouseEvent *event )
   if( !!m_spectrum && !!m_spectrum->channel_energies()
       && m_spectrum->channel_energies()->size() > 3 )
   {
-    const vector<float> &x = *m_spectrum->channel_energies();
     const float xval = static_cast<float>( coorval.x() );
-    const size_t pos = std::upper_bound( x.begin(), x.end(), xval )
-                       - x.begin() - 1;
-    channelstart = m_rebinFactor*(pos/m_rebinFactor);
     
-    channelend = channelstart + m_rebinFactor - 1;
-    
+    const size_t channel = m_spectrum->find_gamma_channel(xval);
+    channelstart = m_rebinFactor * (channel / m_rebinFactor);
+    channelend = channelstart + m_rebinFactor;
+        
     const vector<float> &y = *m_spectrum->gamma_counts();
-	const int nchannel = static_cast<int>( y.size() );
-
-    for( int i = channelstart; i <= channelend && i < nchannel; ++i )
+    const int nchannel = static_cast<int>( y.size() );
+        
+    for( int i = channelstart; i < channelend && i < nchannel; ++i )
       channelcounts += static_cast<double>( y[i] );
   }//if( !!m_spectrum )
   
-  emit mousePositionChanged( channelstart, channelend,
-                             coorval.x(), coorval.y(), channelcounts );
+  emit mousePositionChanged( channelstart, channelend, coorval.x(), coorval.y(), channelcounts );
 }//void mouseMoveEvent(QMouseEvent *event)
 
 
