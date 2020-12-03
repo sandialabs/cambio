@@ -25,7 +25,16 @@ int compareFiles(const std::string& p1, const std::string& p2) {
 	string line1, line2;
 	int lineCount = 0;
 	while (getline(f1, line1) && getline(f2, line2)) {
+
+		if (lineCount == 0) {
+			// inja eats the BOM in the input file if it exists, so we have to do the same here to match outputs
+			if (line1.rfind("\xEF\xBB\xBF", 0) == 0) {
+				line1 = line1.substr(3);
+			}
+		}
+
 		lineCount++;
+
 		if (line1 != line2) {
 			return lineCount;
 		}
@@ -78,7 +87,7 @@ int testChannelDataTemplate(path template_directory, path output_directory) {
 	if (generateOutput(
 		template_directory / path("Test") / path("pu239_1C_Detective_X_50cm.pcf"),
 		template_directory / path("Test") / path("TEST_channel_data.n42"),
-		expectedOutput) != 0) 
+		expectedOutput) != 0)
 	{
 		return EXIT_FAILURE;
 	}
@@ -91,7 +100,7 @@ int testChannelDataTemplate(path template_directory, path output_directory) {
 
 	rapidxml::xml_node<>* node = doc.first_node("ChannelData");
 	string checkValue = string(node->value());
-	
+
 	if (checkValue.length() != 23270) {
 		cout << "FAILED, data incorrect length: " << checkValue.length() << endl;
 		return EXIT_FAILURE;

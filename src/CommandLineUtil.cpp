@@ -1293,7 +1293,8 @@ int run_command_util( const int argc, char *argv[] )
         const set<int> sample_num = info.sample_numbers();
         const std::vector<int> det_nums = info.detector_numbers();
         const vector<bool> det_to_use( det_nums.size(), true );
-        std::shared_ptr<SpecUtils::Measurement> summed_meas = info.sum_measurements( sample_num, det_to_use);
+        const vector<string> det_names = info.detector_names();
+        std::shared_ptr<SpecUtils::Measurement> summed_meas = info.sum_measurements( sample_num, det_names, nullptr);
         vector<shared_ptr<const SpecUtils::Measurement>> meass = info.measurements();
         for( shared_ptr<const SpecUtils::Measurement> &m : meass )
           info.remove_measurement( m, false );
