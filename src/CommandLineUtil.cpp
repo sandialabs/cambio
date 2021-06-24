@@ -518,6 +518,7 @@ int run_command_util( const int argc, char *argv[] )
   cl_desc.add_options()
     ("help,h",  "produce this help message")
     ("about,a",  "produce the about message")
+    ("version,v",  "print version information and exit")
     ("input,i", po::value< vector<string> >(&inputfiles),
               "input spectrum file(s)")
     ("output,o", po::value<string>(&outputname),
@@ -807,6 +808,14 @@ int run_command_util( const int argc, char *argv[] )
   if( cl_vm.count("about") )
   {
     cout << about_msg << endl;
+    return 0;
+  }
+  
+  if( cl_vm.count("version") )
+  {
+    cout << "Cambio 2.1, Command Line Tool.\n"
+         << "Compiled " << __DATE__ << ", for " << BOOST_PLATFORM << " with " << BOOST_COMPILER
+         << endl;
     return 0;
   }
   
