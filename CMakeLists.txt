@@ -42,6 +42,14 @@ if(WIN32)
     foreach(CompilerFlag ${CompilerFlags})
         string(REGEX REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
     endforeach()
+
+	#Set multiprocess build and to target Win7 SP1 (0x0601==Win7, 0x0501==WinXP)
+	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /DWINVER=0x0601 /D_WIN32_WINNT=0x0601" )
+
+	# Lets make sure we can run on Win7 still - not entirely sure how to do this correctly
+	#set( WIN_SDK_VERSION "8.1" ) #"10.0.15063.0"
+  #set( CMAKE_SYSTEM_VERSION "${WIN_SDK_VERSION}" )
+	#set( CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION_MAXIMUM "${WIN_SDK_VERSION}" )
 endif()
  
 if( APPLE AND BUILD_CAMBIO_GUI )
@@ -187,8 +195,9 @@ IF( APPLE AND NOT IOS AND BUILD_CAMBIO_GUI )
   execute_process(COMMAND /usr/bin/security find-identity -v -p codesigning OUTPUT_VARIABLE dev_team_ids )
   STRING(REGEX REPLACE ";" "\\\\;" dev_team_ids "${dev_team_ids}")
   STRING(REGEX REPLACE "\n" ";" dev_team_ids "${dev_team_ids}")
-  LIST(FILTER dev_team_ids INCLUDE REGEX "Developer ID Application:.+" )
-  STRING(REGEX MATCH "\\(.+\\)" mac_team_id ${dev_team_ids} )
+  LIST(FILTER dev_team_ids INCLUDE REGEX "[Developer ID Application:.+|Apple Development.+]" )
+  message( "dev_team_ids = ${dev_team_ids}")
+  STRING(REGEX MATCH "\\(.+\\)" mac_team_id "${dev_team_ids}" )
   STRING(REGEX REPLACE "\\(|\\)" "" mac_team_id "${mac_team_id}")
   message( "Using Mac Developer Team ID='${mac_team_id}'" )
 
@@ -227,7 +236,7 @@ if( BUILD_CAMBIO_GUI )
 	  #target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\lib\\Qt5PrintSupport.lib"  )
 	  #target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\plugins\\printsupport\\windowsprintersupport.lib"  )
 
-    target_link_libraries( ${PROJECT_NAME} PRIVATE "imm32.lib" "Ws2_32.lib" "winmm.lib" "Mincore.lib" "Dwmapi.lib" "Wtsapi32.lib" )
+    target_link_libraries( ${PROJECT_NAME} PRIVATE "imm32.lib" "Ws2_32.lib" "winmm.lib" "Mincore.lib" "Dwmapi.lib" "Wtsapi32.lib" "Pathcch.lib" "Shlwapi.lib" "Version.lib" )
   else()
     link_directories( ${MyQT_DIR}/lib )
     link_directories( ${MyQT_DIR}/plugins/platforms )

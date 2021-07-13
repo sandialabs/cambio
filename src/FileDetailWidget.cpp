@@ -57,9 +57,9 @@ namespace
     const int nmilli = (1000 * fracs) / boost::posix_time::time_duration::ticks_per_second();
   
     QDateTime dt;
-	dt.setTimeSpec( Qt::UTC );
+	  dt.setTimeSpec( Qt::UTC );
     dt.setTime_t( x );
-    dt.addMSecs( nmilli );
+    dt = dt.addMSecs( nmilli );
   
     return dt;
   }//QDateTime posix_to_qt( const boost::posix_time::ptime &time )
@@ -171,9 +171,12 @@ FileDetailWidget::FileDetailWidget( QWidget *parent, Qt::WindowFlags f )
   filelayout->addWidget( m_fileComments, 4, 1, 4, 5 );
   m_fileComments->setAcceptRichText( false );
   
+  const char *dateTimeFrmt = "MMM dd yyyy hh:mm:ss.zzz";
+  
   label = new QLabel( "Date/Time" );
   speclayout->addWidget( label, 0, 0 );
   m_date = new QDateTimeEdit;
+  m_date->setDisplayFormat( dateTimeFrmt );
   speclayout->addWidget( m_date, 0, 1, 1, 3 );
   
   label = new QLabel( "Real Time (s)" );
@@ -207,6 +210,7 @@ FileDetailWidget::FileDetailWidget( QWidget *parent, Qt::WindowFlags f )
   label = new QLabel( "Pos. Date/Time" );
   speclayout->addWidget( label, 1, 4 );
   m_posdate = new QDateTimeEdit;
+  m_posdate->setDisplayFormat( dateTimeFrmt );
   speclayout->addWidget( m_posdate, 1, 5, 1, 3 );
   
   label = new QLabel( "Neutron Count" );
@@ -658,7 +662,7 @@ void FileDetailWidget::dateTimeChanged()
   QDateTime dt = m_date->dateTime();
   if( !dt.isValid() )
   {
-	dt = posix_to_qt( m_meas->start_time() );
+	  dt = posix_to_qt( m_meas->start_time() );
     m_date->setDateTime( dt );
   }else
   {

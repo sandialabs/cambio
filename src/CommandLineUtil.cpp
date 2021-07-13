@@ -518,6 +518,7 @@ int run_command_util( const int argc, char *argv[] )
   cl_desc.add_options()
     ("help,h",  "produce this help message")
     ("about,a",  "produce the about message")
+    ("version,v",  "print version information and exit")
     ("input,i", po::value< vector<string> >(&inputfiles),
               "input spectrum file(s)")
     ("output,o", po::value<string>(&outputname),
@@ -533,7 +534,7 @@ int run_command_util( const int argc, char *argv[] )
               " N42 (defaults to 2012 variant), 2012N42, 2006N42,"
               " CHN (binary integer variant), SPC (defaults to int variant),"
               " INTSPC, FLTSPC, SPE (IAEA format), asciispc (ASCII version of"
-              " SPC), gr130 (256 channel binary format)"
+              " SPC), TKA, gr130 (256 channel binary format), CNF"
 #if( SpecUtils_ENABLE_D3_CHART )
               ", html (webpage plot), json (chart data in json format, equiv to '--format=html --html-output=json')"
 #endif
@@ -810,6 +811,14 @@ int run_command_util( const int argc, char *argv[] )
     return 0;
   }
   
+  if( cl_vm.count("version") )
+  {
+    cout << "Cambio 2.1, Command Line Tool.\n"
+         << "Compiled " << __DATE__ << ", for " << BOOST_PLATFORM << " with " << BOOST_COMPILER
+         << endl;
+    return 0;
+  }
+  
   if( cl_vm.count("help") )
   {
     cout << cl_desc << endl;
@@ -838,6 +847,8 @@ int run_command_util( const int argc, char *argv[] )
   str_to_save_type["gr135"]     = SpecUtils::SaveSpectrumAsType::ExploraniumGr135v2;
   str_to_save_type["dat"]       = SpecUtils::SaveSpectrumAsType::ExploraniumGr135v2;
   str_to_save_type["spe"]       = SpecUtils::SaveSpectrumAsType::SpeIaea;
+  str_to_save_type["cnf"]       = SpecUtils::SaveSpectrumAsType::Cnf;
+  str_to_save_type["tka"]       = SpecUtils::SaveSpectrumAsType::Tka;
 
 #if( SpecUtils_ENABLE_D3_CHART )
   str_to_save_type["html"]       = SpecUtils::SaveSpectrumAsType::HtmlD3;
@@ -1260,9 +1271,8 @@ int run_command_util( const int argc, char *argv[] )
       if( sum_all_spectra )
       {
         const set<int> sample_num = info.sample_numbers();
-        const std::vector<int> det_nums = info.detector_numbers();
-        const vector<bool> det_to_use( det_nums.size(), true );
-        std::shared_ptr<SpecUtils::Measurement> summed_meas = info.sum_measurements( sample_num, det_to_use);
+        const std::vector<string> det_names = info.detector_names();
+        shared_ptr<SpecUtils::Measurement> summed_meas = info.sum_measurements( sample_num, det_names, nullptr );
         vector<shared_ptr<const SpecUtils::Measurement>> meass = info.measurements();
         for( shared_ptr<const SpecUtils::Measurement> &m : meass )
           info.remove_measurement( m, false );
@@ -1289,7 +1299,7 @@ int run_command_util( const int argc, char *argv[] )
           if( nchann < 2 )
             continue;
           
-          const size_t ncombine = std::pow( 2, (rebin_factor-1) );
+          const size_t ncombine = static_cast<size_t>( std::pow( 2, (rebin_factor-1) ) );
           if( (nchann % ncombine) != 0 )
           {
             cerr << "Not rebinning spectra with " << nchann << " as " << nchann
@@ -1534,6 +1544,8 @@ int run_command_util( const int argc, char *argv[] )
           || format == SpecUtils::SaveSpectrumAsType::SpcBinaryFloat
           || format == SpecUtils::SaveSpectrumAsType::SpcAscii
           || format == SpecUtils::SaveSpectrumAsType::SpeIaea
+          || format == SpecUtils::SaveSpectrumAsType::Cnf
+          || format == SpecUtils::SaveSpectrumAsType::Tka
          )
       {
         const vector< std::shared_ptr<const SpecUtils::Measurement> > meass = info.measurements();
@@ -1578,6 +1590,10 @@ int run_command_util( const int argc, char *argv[] )
             wrote = info.write_ascii_spc( output, samplenums, detnumset );
           else if( format == SpecUtils::SaveSpectrumAsType::SpeIaea )
             wrote = info.write_iaea_spe( output, samplenums, detnumset );
+          else if( format == SpecUtils::SaveSpectrumAsType::Cnf )
+            wrote = info.write_cnf( output, samplenums, detnumset );
+          else if( format == SpecUtils::SaveSpectrumAsType::Tka )
+            wrote = info.write_tka( output, samplenums, detnumset );
           else
           {
             assert( 0 );
@@ -1621,7 +1637,7 @@ int run_command_util( const int argc, char *argv[] )
                 
                 char buffer[32];
                 snprintf( buffer, sizeof(buffer), "%d", nwroteone );
-                int nchar = strlen(buffer);
+                size_t nchar = strlen(buffer);
                 while( nchar++ < 4 )  //VS2012 doesnt support %4d format flag
                   outname += "0";
                 outname += buffer;
@@ -1662,6 +1678,10 @@ int run_command_util( const int argc, char *argv[] )
                   wrote = info.write_ascii_spc( output, samplenums, detnumset );
                 else if( format == SpecUtils::SaveSpectrumAsType::SpeIaea )
                   wrote = info.write_iaea_spe( output, samplenums, detnumset );
+                else if( format == SpecUtils::SaveSpectrumAsType::Cnf )
+                  wrote = info.write_cnf( output, samplenums, detnumset );
+                else if( format == SpecUtils::SaveSpectrumAsType::Tka )
+                  wrote = info.write_tka( output, samplenums, detnumset );
                 else
                   assert( 0 );
               
@@ -1919,6 +1939,8 @@ int run_command_util( const int argc, char *argv[] )
           case SpecUtils::SaveSpectrumAsType::NumTypes:
           case SpecUtils::SaveSpectrumAsType::SpeIaea:
           case SpecUtils::SaveSpectrumAsType::SpcAscii:
+          case SpecUtils::SaveSpectrumAsType::Cnf:
+          case SpecUtils::SaveSpectrumAsType::Tka:
             assert( 0 );
           break;
         }//switch( format )

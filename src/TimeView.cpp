@@ -165,37 +165,36 @@ void TimeView::spectrumSampleNumbersChanged( std::shared_ptr<SpecUtils::SpecFile
 {
   m_highlightedRanges.clear();
  
-  if( !!meas && samplenums.size()
+  if( meas && samplenums.size()
       && !!m_grossCounts
       && !!(m_grossCounts->channel_energies())
-      && meas->sample_numbers().size() != samplenums.size() )
+      && meas->sample_numbers().size() != samplenums.size()
+      && (*(meas->sample_numbers().begin()) <= (*samplenums.begin()))
+     )
   {
     const vector<float> times = *(m_grossCounts->channel_energies());
   
     const int first_sample = *meas->sample_numbers().begin();
   
-    int startbin = (*samplenums.begin()) - first_sample + 1;
-    int lastbin = startbin;
-    for( std::set<int>::const_iterator iter = samplenums.begin();
-        iter != samplenums.end(); ++iter )
+    size_t startchannel = static_cast<size_t>( (*samplenums.begin()) - first_sample );
+    size_t lastchannel = startchannel;
+    for( auto iter = samplenums.begin(); iter != samplenums.end(); ++iter )
     {
-      const int bin = (*iter) - first_sample + 1;
-      if( bin > (lastbin+1) )
+      const size_t bin = static_cast<size_t>( (*iter) - first_sample );
+      if( bin > (lastchannel+1) )
       {
-        const float lowerx = m_grossCounts->GetBinLowEdge( startbin );
-        const float upperx = m_grossCounts->GetBinLowEdge( lastbin )
-                              + m_grossCounts->GetBinWidth( lastbin );
+        const float lowerx = m_grossCounts->gamma_channel_lower( startchannel );
+        const float upperx = m_grossCounts->gamma_channel_upper( lastchannel );
         m_highlightedRanges.push_back( pair<float,float>(lowerx,upperx) );
-        startbin = lastbin = bin;
+        startchannel = lastchannel = bin;
       }else
       {
-        lastbin = bin;
+        lastchannel = bin;
       }
     }//for( iterate over sample )
     
-    const float lowerx = m_grossCounts->GetBinLowEdge( startbin );
-    const float upperx = m_grossCounts->GetBinLowEdge( lastbin )
-        + m_grossCounts->GetBinWidth( lastbin );
+    const float lowerx = m_grossCounts->gamma_channel_lower( startchannel );
+    const float upperx = m_grossCounts->gamma_channel_upper( lastchannel );
     m_highlightedRanges.push_back( pair<float,float>(lowerx,upperx) );
   }//if( !!meas )
   
@@ -605,15 +604,15 @@ void TimeView::mouseMoveEvent( QMouseEvent *event )
   int channel = -1;
   double gammacounts = -1.0, neutroncounts = -1.0;
   
-  if( !!m_grossCounts )
+  if( m_grossCounts )
   {
-    const int bin = m_grossCounts->FindFixBin( coorval.x() );
-    if( bin >= 1 && bin <= m_grossCounts->GetNbinsX() )
+    const auto x = coorval.x();
+    if( x >= m_grossCounts->gamma_energy_min() && x <= m_grossCounts->gamma_energy_max() )
     {
-      channel = bin - 1;
-      gammacounts = m_grossCounts->GetBinContent( bin );
-      if( (bin-1) < static_cast<int>(m_grossCounts->neutron_counts().size()) )
-        neutroncounts = m_grossCounts->neutron_counts()[bin-1];
+      size_t channel = m_grossCounts->find_gamma_channel( x );
+      gammacounts = m_grossCounts->gamma_channel_content( channel );
+      if( channel < m_grossCounts->neutron_counts().size() )
+        neutroncounts = m_grossCounts->neutron_counts()[channel];
     }
   }//if( !!m_grossCounts )
   

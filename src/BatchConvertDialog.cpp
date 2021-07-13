@@ -17,6 +17,7 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include <memory>
 #include <fstream>
 
 #include <QDir>
@@ -52,6 +53,7 @@
 #include "SpecUtils/D3SpectrumExport.h"
 
 #ifdef _WIN32
+#include "SpecUtils/StringAlgo.h"
 using SpecUtils::convert_from_utf8_to_utf16;
 #endif
 
@@ -74,6 +76,8 @@ namespace
       case SaveSpectrumAsType::ExploraniumGr130v0: return "GR130 DAT";
       case SaveSpectrumAsType::ExploraniumGr135v2: return "GR135 DAT";
       case SaveSpectrumAsType::SpeIaea:            return "IAEA SPE";
+      case SaveSpectrumAsType::Cnf:                return "Canberra CNF";
+      case SaveSpectrumAsType::Tka:                return "Canberra TKA";
 #if( SpecUtils_ENABLE_D3_CHART )
       case SaveSpectrumAsType::HtmlD3:             return "HTML";
 #endif
@@ -207,9 +211,9 @@ BatchConvertDialog::BatchConvertDialog( QWidget * parent, Qt::WindowFlags f )
 
   QSettings settings;
   QVariant var = settings.value( "SaveFileDir" );
-  const QString val = var.isValid() ? var.toString() : QString("");
-  if( val.size()>2 && QDir(val).exists() )
-	m_saveToPath->setText( val );
+  //const QString val = var.isValid() ? var.toString() : QString("");
+  //if( val.size()>2 && QDir(val).exists() )
+	//m_saveToPath->setText( val );
 
 
   QPushButton *browse = new QPushButton( "Browse..." );
@@ -332,6 +336,9 @@ void BatchConvertDialog::setDirectory( const QString &path )
     selectionmodel->select( index, QItemSelectionModel::Select );
     m_filesystemView->scrollTo( index, QAbstractItemView::EnsureVisible );
   }
+
+  if( dir.exists() )
+    m_saveToPath->setText( dir.absolutePath() );
 }//void setDirectory( const QString &path )
 
 
@@ -350,12 +357,36 @@ void BatchConvertDialog::setFiles( const QList<QString> &files )
     m_filesystemView->scrollTo( index, QAbstractItemView::EnsureVisible );
   }
   
-  QDir savedir( m_saveToPath->text() );
-  if( files.size() && (!savedir.exists() || !savedir.isReadable()) )
+  
+  //Set the save path to be the same as the input files.
+  if( m_saveToPath->text().isEmpty() )
   {
-    QFileInfo info( files[files.size()-1] );
-    m_saveToPath->setText( info.path() );
-  }//if( files.size() )
+    std::set<QString> paths;
+    for( int i = 0; i < files.size(); ++i )
+    {
+      QFileInfo info( files[i] );
+      if( info.exists() )
+        paths.insert( info.path() );
+    }
+    if( paths.size() == 1 )
+    {
+      //  \TODO: check if parent directory is a sub-path of m_saveToPath->text(), and if so, dont change things
+      m_saveToPath->setText( *paths.begin() );
+    }else
+    {
+      QSettings settings;
+      QVariant var = settings.value( "SaveFileDir" );
+      const QString val = var.isValid() ? var.toString() : QString( "" );
+      if( val.size() > 2 && QDir( val ).exists() )
+      {
+        m_saveToPath->setText( val );
+      }else if( files.size() )
+      {
+        QFileInfo info( files[files.size() - 1] );
+        m_saveToPath->setText( info.path() );
+      }
+    }//if( all input files have one parent path ) / else
+  }//if( m_saveToPath->text().isEmpty() )
 }//void setFiles( const QList<QString> &files )
 
 
@@ -439,26 +470,9 @@ void BatchConvertDialog::convert()
     if( pos > 0 )
       out = out.left( pos );
       
-    switch( type )
-    {
-      case SpecUtils::SaveSpectrumAsType::Txt:                out += ".txt"; break;
-      case SpecUtils::SaveSpectrumAsType::Csv:                out += ".csv"; break;
-      case SpecUtils::SaveSpectrumAsType::Pcf:                out += ".pcf"; break;
-      case SpecUtils::SaveSpectrumAsType::N42_2006:                out += ".n42"; break;
-      case SpecUtils::SaveSpectrumAsType::N42_2012:            out += ".n42"; break;
-      case SpecUtils::SaveSpectrumAsType::Chn:                out += ".chn"; break;
-      case SpecUtils::SaveSpectrumAsType::SpcAscii:           out += ".spc"; break;
-      case SpecUtils::SaveSpectrumAsType::ExploraniumGr130v0: out += ".dat"; break;
-      case SpecUtils::SaveSpectrumAsType::ExploraniumGr135v2: out += ".dat"; break;
-      case SpecUtils::SaveSpectrumAsType::SpeIaea:            out += ".dat"; break;
-#if( SpecUtils_ENABLE_D3_CHART )
-      case SpecUtils::SaveSpectrumAsType::HtmlD3:             out += ".html"; break;
-#endif
-      case SpecUtils::SaveSpectrumAsType::SpcBinaryInt:
-      case SpecUtils::SaveSpectrumAsType::SpcBinaryFloat:
-        out += ".spc"; break;
-      case SpecUtils::SaveSpectrumAsType::NumTypes:           break;
-    }//switch( type )
+    
+    out += ".";
+    out += SpecUtils::suggestedNameEnding(type);
     
     outputInfo = QFileInfo( out );
 
@@ -504,63 +518,133 @@ void BatchConvertDialog::convert()
     }//if( !overwriteall && outputInfo.exists() )
     
     const std::string outname = out.toUtf8().data();
-    boost::scoped_ptr<std::ofstream> output;
     
-    if( type != SpecUtils::SaveSpectrumAsType::Chn
-        && type != SpecUtils::SaveSpectrumAsType::SpcBinaryFloat
-        && type != SpecUtils::SaveSpectrumAsType::SpcBinaryInt )
-    {
+    auto open_output_file = [&failed, &out]( const std::string &name ) -> std::unique_ptr<std::ofstream>{
+      std::unique_ptr<std::ofstream> output;
+
 #ifdef _WIN32
-      output.reset( new std::ofstream( convert_from_utf8_to_utf16(outname).c_str(), std::ios::binary | std::ios::out ) );
+      output.reset( new std::ofstream( convert_from_utf8_to_utf16(name).c_str(), std::ios::binary | std::ios::out ) );
 #else
-      output.reset( new std::ofstream( outname.c_str(), std::ios::binary | std::ios::out ) );
+      output.reset( new std::ofstream( name.c_str(), std::ios::binary | std::ios::out ) );
 #endif
-      
-      
       if( !output->is_open() )
       {
         failed.push_back( "Couldnt open '" + out + "' for writing" );
-        continue;
+        return nullptr;
       }//if( !output.is_open() )
-    }//if( type is CHN or SPC )
+
+      return std::move( output );
+    };//open_output_file(...)
     
     
     bool ok = true;
     switch( type )
     {
       case SpecUtils::SaveSpectrumAsType::Txt:
-        ok = meas.write_txt( *output );
+      {
+        auto output = open_output_file( outname );
+        if( output )
+          ok = meas.write_txt( *output );
+
+        if( !ok )
+          failed.push_back( "Possibly failed writing '" + out + "'" );
+        else
+          converted.push_back( out );
+
         break;
-        
+      }//case SpecUtils::SaveSpectrumAsType::Txt:
+
       case SpecUtils::SaveSpectrumAsType::Csv:
-        ok = meas.write_csv( *output );
+      {
+        auto output = open_output_file( outname );
+        if( output )
+          ok = meas.write_csv( *output );
+
+        if( !ok )
+          failed.push_back( "Possibly failed writing '" + out + "'" );
+        else
+          converted.push_back( out );
+
         break;
-        
+      }//case SpecUtils::SaveSpectrumAsType::Csv:
+
       case SpecUtils::SaveSpectrumAsType::Pcf:
-        ok = meas.write_pcf( *output );
+      {
+        auto output = open_output_file( outname );
+        if( output )
+          ok = meas.write_pcf( *output );
+
+        if( !ok )
+          failed.push_back( "Possibly failed writing '" + out + "'" );
+        else
+          converted.push_back( out );
+
         break;
-        
+      }//case SpecUtils::SaveSpectrumAsType::Pcf:
+
       case SpecUtils::SaveSpectrumAsType::N42_2006:
-        ok = meas.write_2006_N42( *output );
+      {
+        auto output = open_output_file( outname );
+        if( output )
+          ok = meas.write_2006_N42( *output );
+
+        if( !ok )
+          failed.push_back( "Possibly failed writing '" + out + "'" );
+        else
+          converted.push_back( out );
+
         break;
-        
+      }//case SpecUtils::SaveSpectrumAsType::N42_2006:
+
       case SpecUtils::SaveSpectrumAsType::N42_2012:
-        ok = meas.write_2012_N42( *output );
+      {
+        auto output = open_output_file( outname );
+        if( output )
+          ok = meas.write_2012_N42( *output );
+
+        if( !ok )
+          failed.push_back( "Possibly failed writing '" + out + "'" );
+        else
+          converted.push_back( out );
+
         break;
-        
+      }//case SpecUtils::SaveSpectrumAsType::N42_2012:
+
       case SpecUtils::SaveSpectrumAsType::ExploraniumGr130v0:
-        ok = meas.write_binary_exploranium_gr130v0( *output );
+      {
+        auto output = open_output_file( outname );
+        if( output )
+          ok = meas.write_binary_exploranium_gr130v0( *output );
+
+        if( !ok )
+          failed.push_back( "Possibly failed writing '" + out + "'" );
+        else
+          converted.push_back( out );
+
         break;
-        
+      }//case SpecUtils::SaveSpectrumAsType::ExploraniumGr130v0:
+
       case SpecUtils::SaveSpectrumAsType::ExploraniumGr135v2:
-        ok = meas.write_binary_exploranium_gr135v2( *output );
+      {
+        auto output = open_output_file( outname );
+        if( output )
+          ok = meas.write_binary_exploranium_gr135v2( *output );
+
+        if( !ok )
+          failed.push_back( "Possibly failed writing '" + out + "'" );
+        else
+          converted.push_back( out );
+
         break;
-        
+      }//case SpecUtils::SaveSpectrumAsType::ExploraniumGr135v2:
+
       case SpecUtils::SaveSpectrumAsType::Chn:
       case SpecUtils::SaveSpectrumAsType::SpcBinaryInt:
       case SpecUtils::SaveSpectrumAsType::SpcBinaryFloat:
       case SpecUtils::SaveSpectrumAsType::SpcAscii:
       case SpecUtils::SaveSpectrumAsType::SpeIaea:
+      case SpecUtils::SaveSpectrumAsType::Cnf:
+      case SpecUtils::SaveSpectrumAsType::Tka:
 #if( SpecUtils_ENABLE_D3_CHART )
       case SpecUtils::SaveSpectrumAsType::HtmlD3:
 #endif
@@ -568,6 +652,8 @@ void BatchConvertDialog::convert()
         int nwroteone = 0;
         const std::set<int> samplenums = meas.sample_numbers();
         const std::vector<int> detnums = meas.detector_numbers();
+        const std::vector<std::string> detnames = meas.detector_names();
+        assert( detnums.size() == detnames.size() );
         
         foreach( const int sample, samplenums )
         {
@@ -577,6 +663,15 @@ void BatchConvertDialog::convert()
             detnumset.insert( detnum );
             samplenumset.insert( sample );
             
+            const auto detnumpos = std::find(std::begin(detnums), std::end(detnums), detnum)
+                                   - std::begin(detnums);
+            std::vector<std::string> detname( 1, detnames[detnumpos] );
+            
+            // Make sure we actually have this measurement, before continuing
+            auto m = meas.measurement( sample, detnames[detnumpos] );
+            if( !m )
+              continue;
+
             QString extention;
             QString outname = out;
             
@@ -587,39 +682,38 @@ void BatchConvertDialog::convert()
               outname = outname.left( pos );
             }//if( pos >= 0 )
             
-            char buffer[32];
-            snprintf( buffer, sizeof(buffer), "_%i", nwroteone );
-            outname += buffer;
+            if( (samplenums.size() > 1) || (detnums.size() > 1) )
+            {
+              char buffer[32];
+              snprintf( buffer, sizeof( buffer ), "_%i", nwroteone );
+              outname += buffer;
+            }//if( outputting more than one output for this input file)
+
             if( extention.size() > 0 )
               outname = outname + extention;
             
-#ifdef _WIN32
-            std::ofstream output( convert_from_utf8_to_utf16(outname.toUtf8().data()).c_str(),
-                                 std::ios::binary | std::ios::out );
-#else
-            std::ofstream output( outname.toUtf8().data(),
-                                 std::ios::binary | std::ios::out );
-#endif
+            auto output = open_output_file( outname.toUtf8().data() );
             
-            if( !output.is_open() )
-            {
-              failed.push_back( "Couldnt open '" + outname + "' for writing" );
-            }else
+            if( output )
             {
               bool wrote = false;
               if( type == SpecUtils::SaveSpectrumAsType::Chn )
-                wrote = meas.write_integer_chn( output, samplenumset, detnumset );
+                wrote = meas.write_integer_chn( *output, samplenumset, detnumset );
               else if( type == SpecUtils::SaveSpectrumAsType::SpcBinaryInt )
-                wrote = meas.write_binary_spc( output, SpecUtils::SpecFile::IntegerSpcType, samplenumset, detnumset );
+                wrote = meas.write_binary_spc( *output, SpecUtils::SpecFile::IntegerSpcType, samplenumset, detnumset );
               else if( type == SpecUtils::SaveSpectrumAsType::SpcBinaryFloat )
-                wrote = meas.write_binary_spc( output, SpecUtils::SpecFile::FloatSpcType, samplenumset, detnumset );
+                wrote = meas.write_binary_spc( *output, SpecUtils::SpecFile::FloatSpcType, samplenumset, detnumset );
               else if( type == SpecUtils::SaveSpectrumAsType::SpcAscii )
-                wrote = meas.write_ascii_spc( output, samplenumset, detnumset );
+                wrote = meas.write_ascii_spc( *output, samplenumset, detnumset );
               else if( type == SpecUtils::SaveSpectrumAsType::SpeIaea )
-                wrote = meas.write_iaea_spe( output, samplenumset, detnumset );
+                wrote = meas.write_iaea_spe( *output, samplenumset, detnumset );
+              else if( type == SpecUtils::SaveSpectrumAsType::Cnf )
+                wrote = meas.write_cnf( *output, samplenumset, detnumset );
+              else if( type == SpecUtils::SaveSpectrumAsType::Tka )
+                wrote = meas.write_tka( *output, samplenumset, detnumset );
 #if( SpecUtils_ENABLE_D3_CHART )
               else if( type == SpecUtils::SaveSpectrumAsType::HtmlD3 )
-                  wrote = meas.write_d3_html( output, D3SpectrumExport::D3SpectrumChartOptions{}, samplenumset, detnumset );
+                  wrote = meas.write_d3_html( *output, D3SpectrumExport::D3SpectrumChartOptions{}, samplenumset, detname );
 #endif
               else
                 assert( 0 );
@@ -638,13 +732,9 @@ void BatchConvertDialog::convert()
       }//case kChnSpectrumFile, or SPC
         
       case SpecUtils::SaveSpectrumAsType::NumTypes:
-                  break;
+        break;
     }//switch( type )
     
-    if( !ok )
-      failed.push_back( "Possibly failed writing '" + out + "'" );
-    else
-      converted.push_back( out );
 
 	if( progress.wasCanceled() )
 	  break;
