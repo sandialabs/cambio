@@ -86,6 +86,7 @@ int main( int argc, char *argv[] )
 
 #include <string>
 #include "SpecUtils/Filesystem.h"
+#include "SpecUtils/StringAlgo.h"
 
 /** Get command line arguments encoded as UTF-8.
  This function just leaks the memory

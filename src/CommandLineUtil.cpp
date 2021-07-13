@@ -121,8 +121,8 @@ namespace {
       output << "]";
     }
     
-    if( !info.measurment_operator().empty() )
-      output << ", Operator: \"" << jsonEscape( info.measurment_operator() ) << "\"";
+    if( !info.measurement_operator().empty() )
+      output << ", Operator: \"" << jsonEscape( info.measurement_operator() ) << "\"";
     
     output << ", NumberMeasurements: " << info.num_measurements();
     
@@ -1607,7 +1607,7 @@ int run_command_util( const int argc, char *argv[] )
           {
             cout << "Saved '" << saveto << "'" << endl;
           }
-        }else  //if( sum all measurments )
+        }else  //if( sum all measurements )
         {
           int nwroteone = 0;
       
