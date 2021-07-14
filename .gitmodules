@@ -1,3 +1,3 @@
 [submodule "SpecUtils"]
 	path = SpecUtils
-	url = https://github.com/bdeldri/SpecUtils.git
+	url = git@gitlab.sandia.gov:wcjohns/SpecUtils.git
