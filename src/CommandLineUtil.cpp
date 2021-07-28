@@ -516,6 +516,7 @@ int run_command_util( const int argc, char *argv[] )
 
 #if( SpecUtils_INJA_TEMPLATES )
   string template_file;
+  bool strip_template_blocks;
 #endif
 
   po::options_description cl_desc("Allowed options");
@@ -555,6 +556,9 @@ int run_command_util( const int argc, char *argv[] )
 #if( SpecUtils_INJA_TEMPLATES )
     ("template-file", po::value<string>(&template_file),
         "Filesystem path of the template file to use (overrides --format option)."
+    )
+    ("strip-template-blocks", po::value<bool>(&strip_template_blocks)->default_value(false),
+        "Sets whitespace stripping option in template engine."
     )
 #endif
     ("inputdir", po::value<string>(&inputdir),
@@ -1966,7 +1970,7 @@ int run_command_util( const int argc, char *argv[] )
             
 #if( SpecUtils_INJA_TEMPLATES )
           case SpecUtils::SaveSpectrumAsType::Template:
-            wrote = info.write_template(output, template_file);
+            wrote = info.write_template(output, template_file, strip_template_blocks);
             break;
 #endif
           case SpecUtils::SaveSpectrumAsType::Chn:
