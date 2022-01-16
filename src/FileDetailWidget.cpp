@@ -44,6 +44,7 @@
 #include "SpecUtils/SpecFile.h"
 #include "cambio/FileDetailTools.h"
 #include "cambio/FileDetailWidget.h"
+#include <cfloat>
 
 using namespace std;
 
