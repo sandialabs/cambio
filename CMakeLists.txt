@@ -87,7 +87,7 @@ if( BUILD_CAMBIO_GUI )
 
   if(WIN32)
     find_package(Qt5 COMPONENTS WinExtras REQUIRED)
-  else()
+  elseif( APPLE )
     find_package(Qt5 COMPONENTS MacExtras REQUIRED)
   endif()
 
