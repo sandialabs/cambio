@@ -69,8 +69,9 @@ endif()
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
-set( Boost_USE_STATIC_LIBS ON )
-set( CMAKE_FIND_LIBRARY_SUFFIXES .a .la .lib ${CMAKE_FIND_LIBRARY_SUFFIXES} )
+if( Boost_USE_STATIC_LIBS )
+  set( CMAKE_FIND_LIBRARY_SUFFIXES .a .la .lib )
+endif()
 
 
 set( headers ${headers} cambio/Cambio_config.h.in )
@@ -148,6 +149,7 @@ endif( APPLE AND BUILD_CAMBIO_GUI )
 if( BUILD_CAMBIO_COMMAND_LINE )
   set( headers ${headers} cambio/CommandLineUtil.h )
   set( sources ${sources} src/CommandLineUtil.cpp )
+  find_library( BOOST_PROGRAM_OPTIONS boost_program_options REQUIRED)
 endif( BUILD_CAMBIO_COMMAND_LINE )
 
 if( NOT BUILD_CAMBIO_GUI AND NOT BUILD_CAMBIO_COMMAND_LINE )
@@ -157,12 +159,16 @@ endif( NOT BUILD_CAMBIO_GUI AND NOT BUILD_CAMBIO_COMMAND_LINE )
 
 add_executable( ${PROJECT_NAME} ${GUI_TYPE} main.cpp ${sources} ${headers} )
 
+if( BUILD_CAMBIO_COMMAND_LINE )
+  target_link_libraries( ${PROJECT_NAME} PRIVATE ${BOOST_PROGRAM_OPTIONS} )
+endif()
+
 if( NOT BUILD_CAMBIO_GUI )
   if( ${CMAKE_SYSTEM_NAME} STREQUAL "Linux" )
     #Right now we are copying all of libpthread into our executable to force copying weak symbols in.
     #  Instead, to save size should specify the functions we actually need using '-u pthread_create', etc.
     #  Could maybe add a "-no_weak_exports" flag to the linker as well to make sure none missing.
-    set( CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} "-static -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive")
+    set( CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} "-pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive")
     target_link_libraries( ${PROJECT_NAME} PRIVATE -static-libgcc -static-libstdc++ )
   endif( ${CMAKE_SYSTEM_NAME} STREQUAL "Linux" )
 endif( NOT BUILD_CAMBIO_GUI )
