@@ -1719,13 +1719,13 @@ int run_command_util( const int argc, char *argv[] )
                 else if( format == SpecUtils::SaveSpectrumAsType::SpcBinaryFloat )
                   wrote = info.write_binary_spc( output, SpecUtils::SpecFile::FloatSpcType, samplenumset, detnumset );
                 else if( format == SpecUtils::SaveSpectrumAsType::SpcAscii )
-                  wrote = info.write_ascii_spc( output, samplenums, detnumset );
+                  wrote = info.write_ascii_spc( output, samplenumset, detnumset );
                 else if( format == SpecUtils::SaveSpectrumAsType::SpeIaea )
-                  wrote = info.write_iaea_spe( output, samplenums, detnumset );
+                  wrote = info.write_iaea_spe( output, samplenumset, detnumset );
                 else if( format == SpecUtils::SaveSpectrumAsType::Cnf )
-                  wrote = info.write_cnf( output, samplenums, detnumset );
+                  wrote = info.write_cnf( output, samplenumset, detnumset );
                 else if( format == SpecUtils::SaveSpectrumAsType::Tka )
-                  wrote = info.write_tka( output, samplenums, detnumset );
+                  wrote = info.write_tka( output, samplenumset, detnumset );
                 else
                   assert( 0 );
               
