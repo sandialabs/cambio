@@ -20,6 +20,7 @@
 #include <cmath>
 #include <limits>
 #include <iostream>
+#include <cfloat>
 
 #include <QtCharts/QChart>
 #include <QBrush>
