@@ -1657,6 +1657,15 @@ int run_command_util( const int argc, char *argv[] )
               detnumset.insert( detnum );
               samplenumset.insert( sample );
             
+              
+              const auto m = info.measurement( sample, detnum );
+              if( !m )
+              {
+                // This detector and sample number measurement combination doesnt specify an
+                //  existing measurement.
+                continue;
+              }
+              
               string extention;
               string outname = saveto;
             
