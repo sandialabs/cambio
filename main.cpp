@@ -49,15 +49,20 @@ Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin);
 #endif
 
 #ifdef _WIN32
-void getUtf8Args( int &argc, char ** &argv );
+void getUtf8Args( int &argc, wchar_t **wargv, char ** &argv );
 #endif
+#include <iostream>
 
+#ifdef _WIN32
+int wmain( int argc, wchar_t *wargv[] )
+{
+  char **argv;
+  getUtf8Args( argc, wargv, argv );
+#else
 int main( int argc, char *argv[] )
 {
-#ifdef _WIN32
-  getUtf8Args( argc, argv );
 #endif
-  
+    
 #if( BUILD_CAMBIO_COMMAND_LINE )
 #if( BUILD_CAMBIO_GUI )
   if( CommandLineUtil::requested_command_line_from_gui( argc, argv ) )
@@ -77,29 +82,13 @@ int main( int argc, char *argv[] )
 
 
 #ifdef _WIN32
-
-#define WIN32_LEAN_AND_MEAN 1
-#include <windows.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <shellapi.h>
-
-#include <string>
-#include "SpecUtils/Filesystem.h"
 #include "SpecUtils/StringAlgo.h"
 
 /** Get command line arguments encoded as UTF-8.
  This function just leaks the memory
  */
-void getUtf8Args( int &argc, char ** &argv )
+void getUtf8Args( int &argc, wchar_t **argvw, char ** &argv )
 {
-  LPWSTR *argvw = CommandLineToArgvW( GetCommandLineW(), &argc );
-  if( !argvw )
-  {
-    printf( "CommandLineToArgvW failed - good luck\n" );
-    return ;
-  }
-  
   argv = (char **)malloc(sizeof(char *)*argc);
   
   for( int i = 0; i < argc; ++i)
@@ -109,9 +98,6 @@ void getUtf8Args( int &argc, char ** &argv )
     argv[i] = (char *)malloc( sizeof(char)*(asutf8.size()+1) );
     strcpy( argv[i], asutf8.c_str() );
   }//for( int i = 0; i < argc; ++i)
-  
-  // Free memory allocated for CommandLineToArgvW arguments.
-  LocalFree(argvw);
 }//void processCustomArgs()
 
 #endif //_WIN32

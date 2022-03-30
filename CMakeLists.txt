@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1.0)
+cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
 project(cambio)
 
@@ -161,6 +161,10 @@ add_executable( ${PROJECT_NAME} ${GUI_TYPE} main.cpp ${sources} ${headers} )
 
 if( BUILD_CAMBIO_COMMAND_LINE )
   target_link_libraries( ${PROJECT_NAME} PRIVATE ${BOOST_PROGRAM_OPTIONS} )
+  
+  if(WIN32)
+    set_target_properties( ${PROJECT_NAME} PROPERTIES LINK_FLAGS "wsetargv.obj")
+  endif(WIN32)
 endif()
 
 if( NOT BUILD_CAMBIO_GUI )

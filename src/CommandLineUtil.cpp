@@ -32,6 +32,18 @@
 #include "SpecUtils/Filesystem.h"
 #include "cambio/CommandLineUtil.h"
 
+
+// Some includes to get terminal width
+#if defined(__APPLE__) || defined(linux) || defined(unix) || defined(__unix) || defined(__unix__)
+#include <sys/ioctl.h>
+#include <unistd.h>
+#elif defined(_WIN32)
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN 1
+#include <Windows.h>
+#endif
+
+
 using namespace std;
 namespace po = boost::program_options;
 using SpecUtils::convert_from_utf8_to_utf16;
@@ -64,6 +76,7 @@ namespace {
   }
 #endif
   
+
   bool html_page_header( std::ostream &ostr, const std::string &title )
   {
     const char *endline = "\r\n";
@@ -464,6 +477,35 @@ namespace
       }
     }//if( print_debug )
   }//void normalize_det_name_to_n42( SpecUtils::SpecFile &info )
+
+
+#if defined(__APPLE__) || defined(unix) || defined(__unix) || defined(__unix__)
+unsigned terminal_width()
+{
+  winsize ws = {};
+  if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) <= -1)
+    return 80;
+  unsigned w = (ws.ws_col);
+  return std::max( 40u, w );
+}
+#elif defined(_WIN32)
+unsigned terminal_width()
+{
+  HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
+  if( handle == INVALID_HANDLE_VALUE )
+    return 80;
+  
+  CONSOLE_SCREEN_BUFFER_INFO info;
+  if( !GetConsoleScreenBufferInfo(handle, &info) )
+    return 80;
+  
+  return unsigned(info.srWindow.Right - info.srWindow.Left);
+}
+#else
+static_assert( 0, "Not unix and not win32?  Unsupported getting terminal width" );
+#endif
+
+
 }//namespace
 
 namespace CommandLineUtil
@@ -518,8 +560,11 @@ int run_command_util( const int argc, char *argv[] )
   string template_file;
   bool strip_template_blocks;
 #endif
-
-  po::options_description cl_desc("Allowed options");
+  
+  unsigned term_width = terminal_width();
+  unsigned min_description_length = ((term_width < 80u) ? term_width/2u : 40u);
+  
+  po::options_description cl_desc("Allowed options", term_width, min_description_length);
   cl_desc.add_options()
     ("help,h",  "produce this help message")
     ("about,a",  "produce the about message")
@@ -532,8 +577,8 @@ int run_command_util( const int argc, char *argv[] )
     ("format,f", po::value<string>(&outputformatstr),
               "Format of output spectrum file.  Must be specified when there"
               " are multiple input files, or if the output name for a single"
-              " spectrum file is ambigous.  For a single file, if this option"
-              " is not specified, the output names file extention will be used"
+              " spectrum file is ambiguous.  For a single file, if this option"
+              " is not specified, the output names file extension will be used"
               " to guess output format desired.\n"
               "Possible values are: \tTXT, CSV, PCF, XML (2006 N42 format),"
               " N42 (defaults to 2012 variant), 2012N42, 2006N42,"
@@ -699,7 +744,7 @@ int run_command_util( const int argc, char *argv[] )
 "                                                                               \n"
 "Please email wcjohns@sandia.gov AND cambio@sandia.gov with bug reports,        \n"
 "suggestions, requests, or new file formats.                                    \n"
-"Please visit https://hekili.ca.sandia.gov/CAMBIO/ for updates and additional   \n"
+"Please visit https://github.com/sandialabs/cambio for updates and additional   \n"
 "information.\n"
 "\n"
 "Copyright (C) 2014 Sandia National Laboratories, org 08126\n"
@@ -954,7 +999,7 @@ int run_command_util( const int argc, char *argv[] )
   if( inputfiles.size() > 1 && !SpecUtils::is_directory(outputname) )
   {
     cerr << "You must specify an output directory when there are mutliple input"
-         << " files" << endl;
+         << " files  -- SpecUtils::is_directory('" << outputname << "')=" << SpecUtils::is_directory(outputname) << endl;
     return 3;
   }//if( mutliple input files, and not a output directory )
   
