@@ -17,6 +17,7 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include <iostream>
 
 #include <QLabel>
 #include <QDebug>
@@ -36,12 +37,11 @@
 #include <QSignalMapper>
 #include <QDoubleValidator>
 
-#define BOOST_DATE_TIME_NO_LIB
-#include <boost/date_time/posix_time/posix_time.hpp>
-
-#include <boost/lexical_cast.hpp>
 
 #include "SpecUtils/SpecFile.h"
+#include "SpecUtils/3rdparty/date/include/date/date.h"
+
+#include "SpecUtils/DateTime.h"
 #include "cambio/FileDetailTools.h"
 #include "cambio/FileDetailWidget.h"
 #include <cfloat>
@@ -50,30 +50,38 @@ using namespace std;
 
 namespace
 {
-  QDateTime posix_to_qt( const boost::posix_time::ptime &time )
+  QDateTime chrono_to_qt( const SpecUtils::time_point_t &time )
   {
-    static const boost::posix_time::ptime epoch(boost::gregorian::date(1970,1,1));
-    const boost::posix_time::time_duration::sec_type x = (time - epoch).total_seconds();
-    const boost::posix_time::time_duration::fractional_seconds_type fracs = time.time_of_day().fractional_seconds();
-    const int nmilli = (1000 * fracs) / boost::posix_time::time_duration::ticks_per_second();
-  
+    const time_t x = std::chrono::system_clock::to_time_t(time);
+    const SpecUtils::time_point_t::duration dur = time.time_since_epoch();
+    // I think we could just do a `fractions = dur - std::chrono::seconds(x)`, but we'll be super safe, for the moment
+    const SpecUtils::time_point_t::duration fractions = dur
+                                   - std::chrono::system_clock::from_time_t(x).time_since_epoch();
+    const int64_t nmilli = chrono::duration_cast<chrono::milliseconds>(fractions).count();
+    
+    
     QDateTime dt;
 	  dt.setTimeSpec( Qt::UTC );
     dt.setTime_t( x );
     dt = dt.addMSecs( nmilli );
   
     return dt;
-  }//QDateTime posix_to_qt( const boost::posix_time::ptime &time )
+  }//QDateTime chrono_to_qt( const SpecUtils::time_point_t &time )
 
 
-  boost::posix_time::ptime qt_to_posix( const QDateTime &dt )
+  SpecUtils::time_point_t qt_to_chrono( const QDateTime &dt )
   {
-    boost::gregorian::date date( dt.date().year(), dt.date().month(), dt.date().day() );
-    const int msec = dt.time().msec() * boost::posix_time::time_duration::ticks_per_second() / 1000;
-    boost::posix_time::time_duration td( dt.time().hour(), dt.time().minute(), dt.time().second(), msec );
-  
-    return boost::posix_time::ptime( date, td );
-  }//boost::posix_time::ptime qt_to_posix( dt )
+    date::year_month_day ymd( date::year( static_cast<int>(dt.date().year()) ),
+                             date::month( static_cast<unsigned>(dt.date().month()) ),
+                             date::day( static_cast<unsigned>(dt.date().day()) ) );
+    
+    const int tod_micros = 1000*dt.time().msecsSinceStartOfDay();
+    const SpecUtils::time_point_t::duration tod = chrono::microseconds( tod_micros );
+    
+    const date::sys_days ymd_tp = ymd;
+    
+    return ymd_tp + tod;
+  }//boost::posix_time::ptime qt_to_chrono( dt )
 }//namespace
 
 
@@ -271,8 +279,8 @@ FileDetailWidget::FileDetailWidget( QWidget *parent, Qt::WindowFlags f )
   alterlayout->addWidget( cropChannels, 0, 1, Qt::AlignLeft );
   
 
-  QPushButton *energyCal = new QPushButton( "Energy Cal (under development)" );
-  energyCal->setToolTip( "Under Construction - allows you to view/change energy callibration" );
+  QPushButton *energyCal = new QPushButton( "Remove Energy Cal" );
+  energyCal->setToolTip( "Allows you to remove the energy calibration from the file." );
   alterlayout->addWidget( energyCal, 0, 2, Qt::AlignLeft );
   
 
@@ -354,8 +362,8 @@ void FileDetailWidget::changeRecord( int record )
   m_meas = meas;
   
   QDateTime startime;
-  if( !meas->start_time().is_special() )
-    startime = posix_to_qt( meas->start_time() );
+  if( !SpecUtils::is_special( meas->start_time() ) )
+    startime = chrono_to_qt( meas->start_time() );
   
   m_date->setDateTime( startime );
   
@@ -373,8 +381,8 @@ void FileDetailWidget::changeRecord( int record )
     m_latitude->setText( buffer );
     
     QDateTime dt;
-    if( !meas->position_time().is_special() )
-      dt = posix_to_qt( meas->position_time() );
+    if( !SpecUtils::is_special( meas->position_time() ) )
+      dt = chrono_to_qt( meas->position_time() );
     m_posdate->setDateTime( dt );
   }else
   {
@@ -663,11 +671,11 @@ void FileDetailWidget::dateTimeChanged()
   QDateTime dt = m_date->dateTime();
   if( !dt.isValid() )
   {
-	  dt = posix_to_qt( m_meas->start_time() );
+	  dt = chrono_to_qt( m_meas->start_time() );
     m_date->setDateTime( dt );
   }else
   {
-    boost::posix_time::ptime pt = qt_to_posix( dt );
+    SpecUtils::time_point_t pt = qt_to_chrono( dt );
     m_measurment->set_start_time( pt, m_meas );
   }
 }//void dateTimeChanged()
@@ -681,11 +689,11 @@ void FileDetailWidget::posDateTimeChanged()
   QDateTime dt = m_posdate->dateTime();
   if( !dt.isValid() )
   {
-    dt = posix_to_qt( m_meas->position_time() );
+    dt = chrono_to_qt( m_meas->position_time() );
     m_posdate->setDateTime( dt );
   }else
   {
-    boost::posix_time::ptime pt = qt_to_posix( dt );
+    SpecUtils::time_point_t pt = qt_to_chrono( dt );
     m_measurment->set_position( m_meas->longitude(), m_meas->latitude(), pt, m_meas );
   }
 }//void posDateTimeChanged()

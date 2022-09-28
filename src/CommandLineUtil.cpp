@@ -24,7 +24,6 @@
 #include <iostream>
 
 #include <boost/program_options.hpp>
-//#include <boost/algorithm/string/compare.hpp>
 
 #include "SpecUtils_config.h"
 #include "SpecUtils/SpecFile.h"
@@ -541,7 +540,7 @@ int run_command_util( const int argc, char *argv[] )
   
   bool no_background_spec, no_foreground_spec, no_intrinsic_spec;
   bool no_calibration_spec, no_unknown_spec;
-  bool background_only, foreground_only, calibation_only, intrinsic_only;
+  bool background_only, foreground_only, calibration_only, intrinsic_only;
   //bool spectra_of_likely_interest_only;
   vector<string> detector_renaimings;
   
@@ -594,7 +593,7 @@ int run_command_util( const int argc, char *argv[] )
               "Forces overwriting of output file."
     )
     ("ini", po::value<string>(),
-     "Fielsystem path of INI file were some or all command line options are"
+     "Filesystem path of INI file were some or all command line options are"
      " specified. Options specified on the command line are combined with"
      " options given in the INI file.  Most options can only be specified once."
     )
@@ -687,11 +686,11 @@ int run_command_util( const int argc, char *argv[] )
      "Filter out all none-foreground spectra."
      " Input files with a single unmarked sample will be assumed as foreground."
     )
-    ("calibation-only", po::value<bool>(&calibation_only)->default_value(false),
+    ("calibration-only", po::value<bool>(&calibration_only)->default_value(false),
      "Filter out all spectra not marked as calibration."
     )
     ("intrinsic-only", po::value<bool>(&intrinsic_only)->default_value(false),
-     "Filter out all spectra not marked as instrinsic."
+     "Filter out all spectra not marked as intrinsic."
     )
     ( "sum-all-spectra", po::value<bool>(&sum_all_spectra)->default_value(false),
        "Sum all spectra in each of the input files, which pass any optional"
@@ -765,13 +764,15 @@ int run_command_util( const int argc, char *argv[] )
 "\n";
   
   auto printExampleMsg = [=](){
+    const string exe_name = SpecUtils::filename(argv[0]);
+    
     cout << endl << "Example uses:\n"
-         << "\t" << argv[0] << " input.n42 output.pcf" << endl
-         << "\t" << argv[0] << " --format=CSV --no-background-spec=true ./path/to/input/*.n42 ./path/to/output" << endl
-         << "\t" << argv[0] << " --format=n42 --sum-all-spectra=1 --input input_0.pcf input_1.csv input_3.spe --output ./output/" << endl
-         << "\t" << argv[0] << " --sum-all-spectra true -o output.spc -i inputfile.n42" << endl
+         << "\t" << exe_name << " input.n42 output.pcf" << endl
+         << "\t" << exe_name << " --format=CSV --no-background-spec=true ./path/to/input/*.n42 ./path/to/output" << endl
+         << "\t" << exe_name << " --format=n42 --sum-all-spectra=1 --input input_0.pcf input_1.csv input_3.spe --output ./output/" << endl
+         << "\t" << exe_name << " --sum-all-spectra true -o output.spc -i inputfile.n42" << endl
 #if( SpecUtils_ENABLE_D3_CHART )
-         << "\t" << argv[0] << " input.n24 output.html"
+         << "\t" << exe_name << " input.n24 output.html"
 #endif
          << endl;
   };
@@ -1137,7 +1138,7 @@ int run_command_util( const int argc, char *argv[] )
     no_foreground_spec = no_intrinsic_spec = no_calibration_spec = no_unknown_spec = true;
   if( foreground_only )
     no_background_spec = no_intrinsic_spec = no_calibration_spec = no_unknown_spec = true;
-  if( calibation_only )
+  if( calibration_only )
     no_background_spec = no_foreground_spec = no_intrinsic_spec = no_unknown_spec = true;
   if( intrinsic_only )
     no_background_spec = no_foreground_spec = no_calibration_spec = no_unknown_spec = true;

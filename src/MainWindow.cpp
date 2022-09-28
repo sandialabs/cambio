@@ -52,9 +52,6 @@
 #include <QDragEnterEvent>
 #include <QCoreApplication>
 
-#include <boost/scoped_ptr.hpp>
-#include <boost/shared_ptr.hpp>
-
 #include "cambio/TimeView.h"
 #include "cambio/SaveWidget.h"
 #include "cambio/MainWindow.h"

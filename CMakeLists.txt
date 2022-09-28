@@ -23,6 +23,9 @@ IF(NOT CMAKE_BUILD_TYPE)
     SET( CMAKE_BUILD_TYPE Debug CACHE STRING "Build type: Debug Release RelWithDebInfo MinSizeRel." FORCE )
 ENDIF(NOT CMAKE_BUILD_TYPE)
 
+
+set( Boost_USE_STATIC_RUNTIME OFF )
+
 if(WIN32)
     if( NOT MyQT_DIR )
       set( MyQT_DIR "C:/install/msvc2017/x64/Qt_5.12_static" )
@@ -34,7 +37,7 @@ if(WIN32)
 
     set( BOOST_PREFIX ${BOOST_ROOT} )
    
-    set( Boost_USE_STATIC_RUNTIME ON )
+    set( CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" )
     set( CMAKE_CXX_FLAGS "/MT ${CMAKE_CXX_FLAGS}" )
   	set(CompilerFlags
         CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELEASE
@@ -149,7 +152,8 @@ endif( APPLE AND BUILD_CAMBIO_GUI )
 if( BUILD_CAMBIO_COMMAND_LINE )
   set( headers ${headers} cambio/CommandLineUtil.h )
   set( sources ${sources} src/CommandLineUtil.cpp )
-  find_library( BOOST_PROGRAM_OPTIONS boost_program_options REQUIRED)
+  
+  find_package( Boost 1.68 REQUIRED COMPONENTS program_options )
 endif( BUILD_CAMBIO_COMMAND_LINE )
 
 if( NOT BUILD_CAMBIO_GUI AND NOT BUILD_CAMBIO_COMMAND_LINE )
@@ -160,7 +164,7 @@ endif( NOT BUILD_CAMBIO_GUI AND NOT BUILD_CAMBIO_COMMAND_LINE )
 add_executable( ${PROJECT_NAME} ${GUI_TYPE} main.cpp ${sources} ${headers} )
 
 if( BUILD_CAMBIO_COMMAND_LINE )
-  target_link_libraries( ${PROJECT_NAME} PRIVATE ${BOOST_PROGRAM_OPTIONS} )
+  target_link_libraries( ${PROJECT_NAME} PRIVATE Boost::program_options )
   
   if(WIN32)
     set_target_properties( ${PROJECT_NAME} PROPERTIES LINK_FLAGS "wsetargv.obj")
@@ -202,17 +206,19 @@ IF( APPLE AND NOT IOS AND BUILD_CAMBIO_GUI )
   set_target_properties( ${PROJECT_NAME} PROPERTIES XCODE_ATTRIBUTE_INSTALL_PATH "/Applications")
 
   #Figure out the development team ID, and set this info for Xcode so it will default to signing the app
-  #  This is probably a little brittle on other peoples machined
-  execute_process(COMMAND /usr/bin/security find-identity -v -p codesigning OUTPUT_VARIABLE dev_team_ids )
+#  This is probably a little brittle on other peoples machined
+  execute_process( COMMAND /usr/bin/security find-identity -v -p codesigning
+      OUTPUT_VARIABLE dev_team_ids
+  )
+
   STRING(REGEX REPLACE ";" "\\\\;" dev_team_ids "${dev_team_ids}")
   STRING(REGEX REPLACE "\n" ";" dev_team_ids "${dev_team_ids}")
-  LIST(FILTER dev_team_ids INCLUDE REGEX "[Developer ID Application:.+|Apple Development.+]" )
-  message( "dev_team_ids = ${dev_team_ids}")
-  STRING(REGEX MATCH "\\(.+\\)" mac_team_id "${dev_team_ids}" )
+  LIST(FILTER dev_team_ids INCLUDE REGEX "Developer ID Application:.+" )
+  STRING(REGEX MATCH "\\(.+\\)" mac_team_id ${dev_team_ids} )
   STRING(REGEX REPLACE "\\(|\\)" "" mac_team_id "${mac_team_id}")
-  message( "Using Mac Developer Team ID='${mac_team_id}'" )
+  message("Using Mac Developer Team ID='${mac_team_id}'")
 
-  set_target_properties( ${PROJECT_NAME} PROPERTIES XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "Mac Developer")
+  set_target_properties( ${PROJECT_NAME} PROPERTIES XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "Mac Developer" )
   set_target_properties( ${PROJECT_NAME} PROPERTIES XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "${mac_team_id}" )
   set_target_properties( ${PROJECT_NAME} PROPERTIES XCODE_ATTRIBUTE_ENABLE_HARDENED_RUNTIME "YES" )
 ENDIF()
@@ -281,22 +287,22 @@ if( BUILD_CAMBIO_GUI )
         ${APP_SERVICES_LIBRARY} ${CORE_FOUNDATION_LIBRARY}
         ${FOUNDATION_LIBRARY} ${IO_KIT_LIBRARY} ${OpenGL_LIBRARY}
         ${SECURITY_LIBRARY} ${QUARTZ_LIBRARY}
-        "/usr/lib/libz.1.dylib"
+ #       "/usr/lib/libz.1.dylib"
       )
 
       target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/plugins/platforms/libqcocoa.a"  )
       target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/plugins/styles/libqmacstyle.a" )
-      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libQt5MacExtras.a"  )
-      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libqtharfbuzz.a"  )
-      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libqtlibpng.a" )
-      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libqtpcre2.a" )
-      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libQt5ClipboardSupport.a" )
-      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libQt5FontDatabaseSupport.a" )
-      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libqtfreetype.a" )
-      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libQt5GraphicsSupport.a" )
-      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libQt5AccessibilitySupport.a" )
-      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libQt5ThemeSupport.a" )
-      target_link_libraries( ${PROJECT_NAME} PRIVATE "/usr/lib/libcups.dylib"  )
+#      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libQt5MacExtras.a"  )
+#      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libqtharfbuzz.a"  )
+#      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libqtlibpng.a" )
+#      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libqtpcre2.a" )
+#      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libQt5ClipboardSupport.a" )
+#      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libQt5FontDatabaseSupport.a" )
+#      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libqtfreetype.a" )
+#      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libQt5GraphicsSupport.a" )
+#      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libQt5AccessibilitySupport.a" )
+#      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libQt5ThemeSupport.a" )
+#      target_link_libraries( ${PROJECT_NAME} PRIVATE "/usr/lib/libcups.dylib"  )
 
 #      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libQt5PrintSupport.a" )
 #      target_link_libraries( ${PROJECT_NAME} PRIVATE "${MyQT_DIR}/lib/libQt5PlatformSupport.a"  )
@@ -305,18 +311,6 @@ if( BUILD_CAMBIO_GUI )
     ENDIF( APPLE AND BUILD_CAMBIO_GUI )
   endif()
 endif( BUILD_CAMBIO_GUI )
-
-
-if( SPECTRUM_DATA_STRUCTS_NO_BOOST_LIB )
-  find_path( Boost_INCLUDE_DIR boost/config.hpp
-             "/Users/wcjohns/install/boost_1_56_0_osx/include" )
-else( SPECTRUM_DATA_STRUCTS_NO_BOOST_LIB )
-  if( BUILD_CAMBIO_COMMAND_LINE )
-    find_package( Boost 1.44.0 COMPONENTS system filesystem date_time program_options )
-  else( BUILD_CAMBIO_COMMAND_LINE )
-    find_package( Boost REQUIRED COMPONENTS system filesystem date_time )
-  endif( BUILD_CAMBIO_COMMAND_LINE )
-endif( SPECTRUM_DATA_STRUCTS_NO_BOOST_LIB )
 
 
 add_subdirectory( SpecUtils )

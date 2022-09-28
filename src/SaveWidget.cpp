@@ -18,6 +18,7 @@
  */
 
 
+#include <memory>
 #include <fstream>
 
 #include <QDir>
@@ -44,7 +45,6 @@
 #include <QDesktopWidget>
 #include <QStandardPaths>
 
-#include <boost/scoped_ptr.hpp>
 
 #include "cambio/CambioApp.h"
 #include "cambio/SaveWidget.h"
@@ -891,7 +891,7 @@ SaveWidget::~SaveWidget()
 
 void SaveWidget::save()
 {
-  boost::scoped_ptr<BusyIndicator> indicator;
+  std::unique_ptr<BusyIndicator> indicator;
   CambioApp *app = dynamic_cast<CambioApp *>( qApp );
   
   if( app )

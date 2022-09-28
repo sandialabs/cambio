@@ -29,7 +29,6 @@
 #include <QtCharts/QChart>
 #include <QGraphicsView>
 
-#include <boost/shared_ptr.hpp>
 
 class QDropEvent;
 class TimeViewImp;

@@ -51,7 +51,8 @@ int compareFiles(const std::string& p1, const std::string& p2) {
 int generateOutput(path inputFile, path inputTemplate, path outputFile) {
 
 	// This is built by the cambio project
-	path cl("../Debug/cambio.exe");
+	//path cl("../Debug/cambio.exe");
+	path cl("./Release/cambio.exe");
 
 	string commandString;
 	commandString.append(cl.string());
@@ -560,7 +561,9 @@ int main(int argc, char** argv)
 	cout << "Cambio Template Test Utility" << endl;
 
 	// This is obviously only valid if the build directory is at the cambio repository root
-	path template_directory("../../../Templates/");
+	//path template_directory("../../../Templates/");
+	path template_directory("n42templates/Templates");
+	
 	path output_directory("./template_test_output/");
 
 	// Clean output directory and recreate

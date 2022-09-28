@@ -45,8 +45,6 @@
 #include <QProgressDialog>
 #include <QFileSystemModel>
 
-#include <boost/scoped_ptr.hpp>
-
 #include "SpecUtils/SpecFile.h"
 #include "SpecUtils/Filesystem.h"
 #include "cambio/BatchConvertDialog.h"

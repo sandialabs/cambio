@@ -36,9 +36,6 @@
 #include <QSignalMapper>
 #include <QDoubleSpinBox>
 
-#define BOOST_DATE_TIME_NO_LIB
-#include <boost/date_time/posix_time/posix_time.hpp>
-
 #include "SpecUtils/SpecFile.h"
 #include "cambio/FileDetailTools.h"
 #include "cambio/FileDetailWidget.h"
@@ -623,8 +620,8 @@ EnergyCalDialog::EnergyCalDialog( FileDetailWidget *parent )
   layout->setContentsMargins( 1,1,1,1 );
   setLayout( layout );
   
-  QLabel *label = new QLabel( "Energy Calibration Under Contruction" );
-  layout->addWidget( label, 0, 0, 1, 2 );
+  //QLabel *label = new QLabel( "Energy Calibration Under Construction" );
+  //layout->addWidget( label, 0, 0, 1, 2 );
 
   m_remove_cal = new QPushButton( "Remove Calibration" );
   layout->addWidget( m_remove_cal, 1, 0, Qt::AlignJustify );

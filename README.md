@@ -8,7 +8,7 @@ To get a pre-compiled executable, head over to the [releases](https://github.com
 
 ## Building from source
 ### Prerequisites
-To compile, you need a c++11 compiler, and:
+To compile, you need a c++14 compiler, and:
 * [boost](https://www.boost.org/) versions 1.44 through 1.65.1 will probably 
 work, but development is done using 1.65.1.
 * To compile the GUI, you will need [Qt](https://www.qt.io/).  
