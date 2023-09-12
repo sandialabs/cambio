@@ -20,6 +20,7 @@
 #include <set>
 #include <cctype>
 #include <string>
+#include <deque>
 #include <fstream>
 #include <iostream>
 
@@ -921,7 +922,7 @@ int run_command_util( const int argc, char *argv[] )
   //spec_exts: extensions of files that we can read.
   const string spec_exts[] = { "txt", "csv", "pcf", "xml", "n42", "chn",
     "spc", "dat", "cnf", "spe", "js", "json", "html", "css", "phd", "dat",
-    "lzs", "lis", "mca", "gam", "mps", "spm", "icd", "tka"
+    "lzs", "lis", "mca", "gam", "mps", "spm", "icd", "tka", "rco"
   };
   const size_t len_spec_exts = sizeof(spec_exts)/sizeof(spec_exts[0]);
   
