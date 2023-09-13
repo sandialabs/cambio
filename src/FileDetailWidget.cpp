@@ -54,9 +54,8 @@ namespace
   {
     const time_t x = std::chrono::system_clock::to_time_t(time);
     const SpecUtils::time_point_t::duration dur = time.time_since_epoch();
-    // I think we could just do a `fractions = dur - std::chrono::seconds(x)`, but we'll be super safe, for the moment
     const SpecUtils::time_point_t::duration fractions = dur
-                                   - std::chrono::system_clock::from_time_t(x).time_since_epoch();
+                                   - std::chrono::seconds(x);
     const int64_t nmilli = chrono::duration_cast<chrono::milliseconds>(fractions).count();
     
     
