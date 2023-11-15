@@ -18,6 +18,7 @@
  */
 
 #include <set>
+#include <deque>
 #include <cctype>
 #include <string>
 #include <fstream>
@@ -541,6 +542,7 @@ int run_command_util( const int argc, char *argv[] )
   bool no_background_spec, no_foreground_spec, no_intrinsic_spec;
   bool no_calibration_spec, no_unknown_spec;
   bool background_only, foreground_only, calibration_only, intrinsic_only;
+  vector<string> only_det_named;
   //bool spectra_of_likely_interest_only;
   vector<string> detector_renaimings;
   
@@ -704,6 +706,8 @@ int run_command_util( const int argc, char *argv[] )
       " can be (ex., for 1024 channels, a rebin factor > 10), then it will be rebined"
       " down to a single channel."
     )
+    ("only-detectors", po::value< vector<string> >(&only_det_named)->composing(),
+     "Names of detector to leave in file.  If not specified, all detectors will be used.")
     ("rename-det", po::value<vector<string>>(&detector_renaimings)->composing(), //multitoken(),
      "Rename detector.  You can specify this option multiple times, once for"
      " each detector to rename.  The argument to this option must be formated"
@@ -1142,7 +1146,6 @@ int run_command_util( const int argc, char *argv[] )
     no_background_spec = no_foreground_spec = no_intrinsic_spec = no_unknown_spec = true;
   if( intrinsic_only )
     no_background_spec = no_foreground_spec = no_calibration_spec = no_unknown_spec = true;
-
   
   string outdir, outname;
   if( SpecUtils::is_directory(outputname) )
@@ -1305,6 +1308,53 @@ int run_command_util( const int argc, char *argv[] )
         }
       }//if( more than one calibration present, and we only want one )
       
+
+      if (!only_det_named.empty())
+      {
+        vector<string> det_names = info.detector_names();
+        set<string> remaining_dets( begin(det_names), end(det_names) );
+
+        for (const string& detname : only_det_named)
+        {
+          const auto pos = std::find(begin(det_names), end(det_names), detname);
+          if (pos == end(det_names))
+          {
+            cerr << "\n\nFile '" << inputfiles[i] << "' has detectors named [";
+            for (size_t j = 0; j < det_names.size(); ++j)
+              cerr << (j ? ", " : "") << "'" << det_names[j] << "'";
+            cerr << "], but you requested to keep a detector named '" << detname
+              << "' - not continuing.\n";
+            return 17;
+          }
+
+          remaining_dets.erase(detname);
+        }//for (const std::string& detname : only_det_named)
+
+        if (remaining_dets.empty())
+        {
+          cerr << "\n\nFor file '" << inputfiles[i] << "', all measurements would be removed"
+            << " because of detector name filter; not performing file type conversion.\n";
+        }
+
+        vector<shared_ptr<const SpecUtils::Measurement>> to_remove;
+        for (const shared_ptr<const SpecUtils::Measurement>& m : info.measurements())
+        {
+          assert(m);
+          if (!m)
+            continue;
+
+          const string& name = m->detector_name();
+          const auto pos = std::find(begin(only_det_named), end(only_det_named), name);
+
+          if (pos == end(only_det_named))
+            to_remove.push_back(m);
+        }//for (const shared_ptr<const SpecUtils::Measurement>& m : info.measurements())
+
+        assert(!to_remove.empty());
+        info.remove_measurements(to_remove);
+      }//if (!only_det_named.empty())
+
+
       const set<int> prefilter_samples = info.sample_numbers();
       
       auto remove_type = [&info,inname,prefilter_samples]( SpecUtils::SourceType type ){
@@ -1336,7 +1386,7 @@ int run_command_util( const int argc, char *argv[] )
           }//try / catch
         }//if( nremoved )
       };//remove_type(...)
-      
+
       if( no_background_spec )
         remove_type( SpecUtils::SourceType::Background );
       
