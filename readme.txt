@@ -1,3 +1,7 @@
+# Hints for building cambio on various platforms
+
+OS X
+====
 
 For Qt 5.2.1 on OS X, got Qt to compile with 
 ./configure -no-framework -no-icu -no-openssl -static -release -prefix /Users/wcjohns/install/Qt5.2.1_static -no-xcb-xlib -no-xcb --no-glib --no-dbus -no-compile-examples -nomake examples
@@ -7,12 +11,36 @@ For Qt 5.11.1 on OS X, got Qt to compile with
 export MACOSX_DEPLOYMENT_TARGET=10.11
 ./configure -no-framework -no-icu -no-openssl -static -release -prefix /Users/wcjohns/install/Qt5.11.1_static -no-xcb-xlib -no-xcb --no-glib --no-dbus -no-cups -no-compile-examples -nomake examples -opensource -confirm-license -no-framework --c++std=c++14
 
-
+Android
+=======
 
 For Android I ended up having to make CambioAndroid.pro which is a hack and a half, but if you create a QT Creator project from this .pro file, it compiles and loads the app onto the device, however it relies on build_test/SpecUtils_config.h existing, and all libraries are tied very specifically to my mac.  I tried generating this .pro file from CMake, but ultimately couldn’t get it to work out.
 
+
+Linux
+=====
+
 To compile statically on linux, should look at using https://github.com/wheybags/glibc_version_header or use something like Alpine linux to compile things.
 
+Building cambio on an Ubuntu workstation (at least x86_64 22.04LTS) is easy.
+
+```
+$ sudo apt install cmake-curses-gui build-essential qtbase5-dev libqt5charts5-dev libboost-dev libboost-program-options-dev
+$ git clone --recurse-submodules https://github.com/sandialabs/cambio
+$ mkdir -p cambio/build
+$ cd cambio/build
+$ cmake -DBUILD_CAMBIO_COMMAND_LINE=ON -DBUILD_CAMBIO_GUI=OFF -DCMAKE_BUILD_TYPE=Release ..
+$ make -j 8
+$ ./cambio --help
+```
+
+This recipe will build `cambio` as a command line tool, mostly for testing SpecUtils
+changes. Build-essential will pull in cmake; some people prefer to use `ccmake` to
+tune their compile options.
+
+
+Windows
+=======
 
 To compile Qt statically on windows, I had to use the open source license (the
 commercial one wouldnt finish configuring for some reason), and change the 
