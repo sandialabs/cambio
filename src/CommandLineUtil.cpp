@@ -30,6 +30,10 @@
 #include "SpecUtils/SpecFile.h"
 #include "SpecUtils/StringAlgo.h"
 #include "SpecUtils/Filesystem.h"
+#if( SpecUtils_ENABLE_URI_SPECTRA )
+#include "SpecUtils/UriSpectrum.h"
+#endif
+
 #include "cambio/CommandLineUtil.h"
 
 
@@ -543,7 +547,7 @@ int run_command_util( const int argc, char *argv[] )
   bool no_calibration_spec, no_unknown_spec;
   bool background_only, foreground_only, calibration_only, intrinsic_only;
   //bool spectra_of_likely_interest_only;
-  vector<string> detector_renaimings;
+  vector<string> detector_renaimings, detectors_to_include, detectors_to_exclude;
   
 #if( SpecUtils_ENABLE_D3_CHART )
   string html_to_include = "all";
@@ -559,6 +563,11 @@ int run_command_util( const int argc, char *argv[] )
 #if( SpecUtils_INJA_TEMPLATES )
   string template_file;
   bool strip_template_blocks;
+#endif
+  
+#if( SpecUtils_ENABLE_URI_SPECTRA )
+  size_t num_uris = 1;
+  vector<string> uri_options;
 #endif
   
   unsigned term_width = terminal_width();
@@ -587,6 +596,9 @@ int run_command_util( const int argc, char *argv[] )
               " SPC), TKA, gr130 (256 channel binary format), CNF"
 #if( SpecUtils_ENABLE_D3_CHART )
               ", html (webpage plot), json (chart data in json format, equiv to '--format=html --html-output=json')"
+#endif
+#if( SpecUtils_ENABLE_URI_SPECTRA )
+              ", URI (for e.g., embedding to QR-codes; see 'uri-option' and 'num-uri')"
 #endif
      )
   
@@ -626,7 +638,7 @@ int run_command_util( const int argc, char *argv[] )
               " format that only allows a single spectrum, this option"
               " specifies to sum all spectra in the input file and save it"
               " as a single spectrum in the single ouput file.  By default a"
-              " seperate output file will be created for each spectrum in the"
+              " separate output file will be created for each spectrum in the"
               " input file.  This option does not effect saving input files"
               " with many spectra to a format that supports mutliple spectra ("
               "which creates a single ouput file with multiple spectra).")
@@ -724,6 +736,22 @@ int run_command_util( const int argc, char *argv[] )
      "If detectors are already named according to N42, or renamed with the"
      " 'rename-det' option, no changes will be made."
     )
+  ("det-to-exclude", po::value<vector<string>>(&detectors_to_exclude)->composing(), //multitoken(),
+   "Detector names to exclude from output.\n\t"
+   "This filter is applied before (the optional) detector renaming, or normalizing.\n\t"
+   "Detector names are case-sensitive.\n\t"
+   "You can specify this option multiple times for multiple detectors.\n\t"
+   "Ex., ./cambio --det-to-exclude=Aa1 input.n42 output.pcf\n\t"
+   "     ./cambio --det-to-exclude 'Aa 1' input.n42 output.pcf\n\t"
+  )
+  ("det-to-include", po::value<vector<string>>(&detectors_to_include)->composing(), //multitoken(),
+   "Detector names to include in output - non-named detectors will not be included.\n\t"
+   "This filter is applied before (the optional) detector renaming, or normalizing.\n\t"
+   "Detector names are case-sensitive.\n\t"
+   "You can specify this option multiple times for multiple detectors.\n\t"
+   "Ex., ./cambio --det-to-include=Aa1 input.n42 output.pcf\n\t"
+   "     ./cambio --det-to-include 'Aa 1' input.n42 output.pcf\n\t"
+  )
 #if( SpecUtils_ENABLE_D3_CHART )
     ("html-output", po::value<string>(&html_to_include)->default_value("all"),
      "Only applies when saving to the HTML format.  The components to include"
@@ -735,6 +763,23 @@ int run_command_util( const int argc, char *argv[] )
        "'d3': the D3 javascript library\n\t"
        "'controls': the html and js for display options"
     )
+#endif
+#if( SpecUtils_ENABLE_URI_SPECTRA )
+  ("uri-option", po::value<vector<string>>(&uri_options)->composing(), //multitoken(),
+   "Only applies when saving to the URI format.\n\t"
+      "Options to apply when creating the URI; potential values are\n\t"
+      "NoDeflate, NoBaseXEncoding, CsvChannelData, NoZeroCompressCounts,\n\t"
+      "UseUrlSafeBase64, and AsMailToUri.\n\t"
+      "Multiple options may be specified, and will be combined together.\n\n"
+      "(ex. '--format=uri --uri-option=AsMailToUri --uri-option=UseUrlSafeBase64')"
+   )
+  ("num-uri", po::value<size_t>(&num_uris)->default_value(1),
+   "Only applies when saving to the URI format.\n\t"
+       "The number of URIs to split the output into; if multiple\n\t"
+       "spectra are being written (ex, foreground+background) then\n\t"
+       "a value of 1 (default) must be used.  If a single spectrum\n\t"
+       "a value from 1 to 9 can be used."
+  )
 #endif
   ;
   
@@ -917,12 +962,15 @@ int run_command_util( const int argc, char *argv[] )
   str_to_save_type["css"]        = SpecUtils::SaveSpectrumAsType::HtmlD3;
 #endif
 
+#if( SpecUtils_ENABLE_URI_SPECTRA )
+  str_to_save_type["uri"]                 = SpecUtils::SaveSpectrumAsType::Uri;
+#endif
 
   
   //spec_exts: extensions of files that we can read.
   const string spec_exts[] = { "txt", "csv", "pcf", "xml", "n42", "chn",
     "spc", "dat", "cnf", "spe", "js", "json", "html", "css", "phd", "dat",
-    "lzs", "lis", "mca", "gam", "mps", "spm", "icd", "tka", "rco"
+    "lzs", "lis", "mca", "gam", "mps", "spm", "icd", "tka", "rco", "uri"
   };
   const size_t len_spec_exts = sizeof(spec_exts)/sizeof(spec_exts[0]);
   
@@ -1212,6 +1260,23 @@ int run_command_util( const int argc, char *argv[] )
   }//for( string detrename : detector_renaimings )
   
   
+#if( SpecUtils_ENABLE_URI_SPECTRA )
+  if( format != SpecUtils::SaveSpectrumAsType::Uri )
+  {
+    if( !uri_options.empty() )
+    {
+      cerr << "You can not specify any 'uri-option' options unless output format is URI." << endl;
+      return 17;
+    }
+    
+    if( num_uris != 1 )
+    {
+      cerr << "You can not specify the 'num-uri' option unless output format is URI." << endl;
+      return 18;
+    }
+  }//if( format != SpecUtils::SaveSpectrumAsType::Uri )
+#endif //#if( SpecUtils_ENABLE_URI_SPECTRA )
+  
   
   bool parsed_all = true, input_didnt_exist = false,
        file_existed = false, wrote_all = true;
@@ -1298,13 +1363,71 @@ int run_command_util( const int argc, char *argv[] )
           info.keep_energy_cal_variant( prefered_variant );
         }else
         {
-          cerr << "Couldnt identify a prefered energy variant out of {";
+          cerr << "Couldn't identify a preferred energy variant out of {";
           int calnum = 0;
           for( const auto str : cals )
             cerr << (calnum++ ? ", " : "") << str;
           cerr << "} - so including all energy calibrations" << endl;
         }
       }//if( more than one calibration present, and we only want one )
+      
+      
+      if( !detectors_to_exclude.empty() || !detectors_to_include.empty() )
+      {
+        vector<string> keeper_names = info.detector_names();
+        
+        for( const string &det : detectors_to_exclude )
+        {
+          const auto pos = std::find( begin(keeper_names), end(keeper_names), det );
+          if( pos == end(keeper_names) )
+            cerr << "Warning: input file '" << inname
+                 << "', does not contain a detector named '" << det << "' - ignoring." << endl;
+          else
+            keeper_names.erase( pos );
+        }//for( const string det : detectors_to_exclude )
+        
+        if( !detectors_to_include.empty() )
+        {
+          vector<string> keepers;
+          for( const string &det : detectors_to_include )
+          {
+            const auto pos = std::find( begin(keeper_names), end(keeper_names), det );
+            if( pos == end(keeper_names) )
+              cerr << "Warning: input file '" << inname
+                   << "', does not contain a detector named '" << det << "' - ignoring." << endl;
+            else
+              keepers.push_back( det );
+          }//for( const string &det : detectors_to_include )
+          
+          keeper_names.swap( keepers );
+        }//if( !detectors_to_include.empty() )
+        
+        
+        if( keeper_names.empty() )
+        {
+          cerr << "Warning: there were no detectors left, after filtering for input file '"
+          << inname << "' - skipping file." << endl;
+          
+          continue;
+        }//if( keeper_names.empty() )
+        
+        
+        for( const auto &m : info.measurements() )
+        {
+          const auto pos = std::find( begin(keeper_names), end(keeper_names), m->detector_name() );
+          if( pos == end(keeper_names) )
+            info.remove_measurement( m, false );
+        }
+        
+        try
+        {
+          info.cleanup_after_load();
+        }catch( std::exception &e )
+        {
+          cerr << "Error removing spectra from '" << inname << "': " << e.what() << " -- skipping file." << endl;
+          continue;
+        }//try / catch
+      }//if( !detectors_to_exclude.empty() || !detectors_to_include.empty() )
       
       const set<int> prefilter_samples = info.sample_numbers();
       
@@ -2032,6 +2155,59 @@ int run_command_util( const int argc, char *argv[] )
             wrote = info.write_template(output, template_file, strip_template_blocks);
             break;
 #endif
+
+#if( SpecUtils_ENABLE_URI_SPECTRA )
+          case SpecUtils::SaveSpectrumAsType::Uri:
+          {
+            if( num_uris == 0 )
+              throw runtime_error( "You must specify to use at least one URI." );
+            
+            if( num_uris > 9 )
+              throw runtime_error( "You may specify a maximum of 9 URIs." );
+            
+            // TODO: account for neutron records being separate from gammas
+            const size_t num_meas = info.num_measurements();
+            if( (num_meas > 1) && (num_uris > 1) )
+              throw runtime_error( "There are " + std::to_string(num_meas) + " measurements, but"
+                                  " you specified to write to " + std::to_string(num_uris)
+                                  + " URIs.  Multiple measurements may only be written to a"
+                                    " single URI." );
+            
+            uint8_t encode_options = 0x0;
+            
+            for( const string &opt : uri_options )
+            {
+              if( SpecUtils::iequals_ascii(opt, "NoDeflate") )
+                encode_options |= SpecUtils::EncodeOptions::NoDeflate;
+              else if( SpecUtils::iequals_ascii(opt, "NoBaseXEncoding") )
+                encode_options |= SpecUtils::EncodeOptions::NoBaseXEncoding;
+              else if( SpecUtils::iequals_ascii(opt, "CsvChannelData") )
+                encode_options |= SpecUtils::EncodeOptions::CsvChannelData;
+              else if( SpecUtils::iequals_ascii(opt, "NoZeroCompressCounts") )
+                encode_options |= SpecUtils::EncodeOptions::NoZeroCompressCounts;
+              else if( SpecUtils::iequals_ascii(opt, "UseUrlSafeBase64") )
+                encode_options |= SpecUtils::EncodeOptions::UseUrlSafeBase64;
+              else if( SpecUtils::iequals_ascii(opt, "AsMailToUri") )
+                encode_options |= SpecUtils::EncodeOptions::AsMailToUri;
+              else
+              {
+                cerr << "An invalid 'uri-option' option, '" << opt << "' was specified.\n\t"
+                << "tValid options are: 'NoDeflate', 'NoBaseXEncoding', 'CsvChannelData',\n\t"
+                << "'NoZeroCompressCounts', 'UseUrlSafeBase64', 'AsMailToUri'"
+                << endl;
+                return 19;
+              }
+            }//for( const string &opt : uri_options )
+            
+          
+            info.write_uri( output, num_uris, encode_options );
+            
+            wrote = output.good();
+            
+            break;
+          }//case SpecUtils::SaveSpectrumAsType::Uri:
+#endif //SpecUtils_ENABLE_URI_SPECTRA
+            
           case SpecUtils::SaveSpectrumAsType::Chn:
           case SpecUtils::SaveSpectrumAsType::SpcBinaryInt:
           case SpecUtils::SaveSpectrumAsType::SpcBinaryFloat:
