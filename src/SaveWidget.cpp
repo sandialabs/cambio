@@ -1324,7 +1324,7 @@ void SaveWidget::formatChanged()
       m_saveToMultiSpecFile->show();
       m_saveToSingleSpecFile->hide();
       desc = "Spectrum(s) will be written to an ascii text file.  At the"
-             " beggining of the file the original file name, total live and"
+             " beginning of the file the original file name, total live and"
              " real times, sum gamma counts, sum neutron counts, and any file"
              " level remarks will be written on seperate labeled lines."
              "  Then after two blank lines each spectrum in the current file"

@@ -4,7 +4,7 @@ Cambio converts spectrum files from nearly all common handheld and lab-based spe
 Cambio can be built either as a GUI that allows previewing the spectrum files, editing the meta-data, and interactively choosing the output format options, or Cambio can be built as a command line only utility.  The command line utility is useful for calling from batch scripts, or calling from other programs to take care of reading the hundreds of potential formats, making it so your program only needs to read in a single format.
 
 ## Getting Started
-To get a pre-compiled executable, head over to the [releases](https://github.com/sandialabs/interspec/releases) tab, or to download historical version of the app see: https://hekili.ca.sandia.gov/CAMBIO/.
+To get a pre-compiled executable, head over to the [releases](https://github.com/sandialabs/cambio/releases) tab, or to download historical version of the app see: https://hekili.ca.sandia.gov/CAMBIO/.
 
 ## Building from source
 ### Prerequisites
