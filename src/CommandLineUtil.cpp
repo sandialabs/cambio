@@ -2199,6 +2199,14 @@ int run_command_util( const int argc, char *argv[] )
               }
             }//for( const string &opt : uri_options )
             
+            if( (encode_options & SpecUtils::EncodeOptions::UseUrlSafeBase64)
+               && (encode_options & SpecUtils::EncodeOptions::NoBaseXEncoding) )
+            {
+              cerr << "You can not specify 'uri-option' options 'UseUrlSafeBase64' and"
+              << "'NoBaseXEncoding' together." << endl;
+              return 20;
+            }
+             
           
             info.write_uri( output, num_uris, encode_options );
             
