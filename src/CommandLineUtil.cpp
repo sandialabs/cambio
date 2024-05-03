@@ -552,6 +552,7 @@ int run_command_util( const int argc, char *argv[] )
   bool no_background_spec, no_foreground_spec, no_intrinsic_spec;
   bool no_calibration_spec, no_unknown_spec;
   bool background_only, foreground_only, calibration_only, intrinsic_only;
+  bool sum_det_per_sample, sum_samples_per_det;
   //bool spectra_of_likely_interest_only;
   vector<string> detector_renaimings, detectors_to_include, detectors_to_exclude;
   
@@ -775,6 +776,14 @@ int run_command_util( const int argc, char *argv[] )
    "You can specify this option multiple times for multiple detectors.\n\t"
    "Ex., ./cambio --det-to-include=Aa1 input.n42 output.pcf\n\t"
    "     ./cambio --det-to-include 'Aa 1' input.n42 output.pcf\n\t"
+  )
+  ("sum-det-per-sample", po::value<bool>(&sum_det_per_sample)->default_value(false)->implicit_value(true),
+   "For each sample number, sum all detectors for that sample number together.\n\t"
+   "i.e. Output one spectrum for each sample, no matter how many detectors there are."
+  )
+  ("sum-samples-per-det", po::value<bool>(&sum_samples_per_det)->default_value(false)->implicit_value(true),
+   "For each detector, sum all sample numbers together.\n\t"
+   "i.e. Output one spectrum for each detector, no matter how many sample is in input."
   )
   ("combine-input-files", po::value<bool>(&combine_all_files)->default_value(false)->implicit_value(true),
    "Combines all input files, and writes a single output file."
@@ -1465,12 +1474,21 @@ int run_command_util( const int argc, char *argv[] )
     }
   }//if( combine_all_files ) / else
   
+  if( sum_det_per_sample && sum_samples_per_det )
+  {
+    cerr << "You can not specify both 'sum-det-per-sample' and 'sum-samples-per-det'." << endl;
+    return 36;
+  }//if( sum_det_per_sample && sum_samples_per_det )
   
+  
+ 
   
   // We'll define a lambda to actually write the output file
   auto write_output_file = [
     //First we'll capture variables we wont change, by value
-    force_writing, summ_meas_for_single_out
+    force_writing, summ_meas_for_single_out,
+    sum_det_per_sample, 
+    sum_samples_per_det
 #if( SpecUtils_ENABLE_D3_CHART )
     , html_to_include
 #endif
@@ -1487,6 +1505,122 @@ int run_command_util( const int argc, char *argv[] )
     
     bool file_existed = false;
     bool opened_all_output_files = true, encoded_all_files = true;
+    
+    
+    if( sum_det_per_sample )
+    {
+      const set<int> orig_samples = info.sample_numbers();
+      const vector<string> orig_dets = info.detector_names();
+      
+      vector<shared_ptr<SpecUtils::Measurement>> keepers;
+      for( const int sample : orig_samples )
+      {
+        vector<shared_ptr<const SpecUtils::Measurement>> sample_meass = info.sample_measurements(sample);
+        if( sample_meass.size() == 1 )
+        {
+          auto m = make_shared<SpecUtils::Measurement>( *(sample_meass[0]) );
+          m->set_detector_name( "summed" );
+          keepers.push_back( m );
+        }else if( sample_meass.size() > 1 )
+        {
+          // TODO: summing will fail if we dont have any Measurements with gamma spectra that have valid energy calibrations (e.g., all Measurements are neutrons) - we should handle this case
+          try
+          {
+            shared_ptr<SpecUtils::Measurement> m = info.sum_measurements( {sample}, orig_dets, 0 );
+            
+            set<string> titles;
+            bool all_background = true;
+            for( auto orig : sample_meass )
+            {
+              const bool empty_title = orig->title().empty();
+              if( !empty_title )
+                titles.insert( orig->title() );
+              
+              all_background &= (SpecUtils::icontains( orig->title(), "Background")
+                                 || (orig->source_type() == SpecUtils::SourceType::Background)
+                                 || (info.passthrough() && (orig->occupied() == SpecUtils::OccupancyStatus::NotOccupied)));
+            }//for( auto orig : sample_meass )
+            
+            assert( m );
+            if( m )
+            {
+              m->set_detector_name( "summed" );
+              m->set_sample_number( sample );
+              
+              if( titles.size() == 1 )
+                m->set_title( *begin(titles) );
+              else if( all_background )
+                m->set_title( "Background" );
+              else
+                m->set_title( "" );
+              
+              keepers.push_back( m );
+            }//if( m )
+          }catch( std::exception & )
+          {
+            cerr << "Error summing records for sample " << sample << " - omitting the "
+                 << sample_meass.size() << " records for this sample number." << endl;
+          }//try / catch - to sum the measurements for this sample
+        }//for( const int sample : orig_samples )
+      }//for( const int sample : orig_samples )
+      
+      info.remove_measurements( info.measurements() );
+      for( auto m : keepers )
+        info.add_measurement( m, false );
+      
+      info.set_uuid( "" );
+      info.cleanup_after_load( SpecUtils::SpecFile::CleanupAfterLoadFlags::DontChangeOrReorderSamples );
+    }//if( sum_det_per_sample )
+    
+    
+    if( sum_samples_per_det )
+    {
+      const set<int> orig_samples = info.sample_numbers();
+      const vector<string> orig_dets = info.detector_names();
+      
+      vector<shared_ptr<SpecUtils::Measurement>> keepers;
+      map<string,vector<shared_ptr<const SpecUtils::Measurement>>> detector_to_meas;
+      map<string,shared_ptr<SpecUtils::Measurement>> detector_to_sum;
+      
+      for( const string &det : orig_dets )
+      {
+        vector<shared_ptr<const SpecUtils::Measurement>> &det_meas = detector_to_meas[det];
+        for( const int sample : orig_samples )
+        {
+          auto m = info.measurement( sample, det );
+          if( m )
+            det_meas.push_back( m );
+        }//for( const int sample : orig_samples )
+        
+        if( det_meas.size() == 1 )
+        {
+          auto m = make_shared<SpecUtils::Measurement>( *det_meas.front() );
+          m->set_sample_number( 1 );
+          keepers.push_back( m );
+        }else if( det_meas.size() > 1 )
+        {
+          // TODO: summing will fail if we dont have any Measurements with gamma spectra that have valid energy calibrations (e.g., this is a neutron detector) - we should handle this case
+          try
+          {
+            shared_ptr<SpecUtils::Measurement> m = info.sum_measurements( orig_samples, {det}, 0 );
+            m->set_detector_name( det );
+            m->set_sample_number( 1 );
+            keepers.push_back( m );
+          }catch( std::exception & )
+          {
+            cerr << "Error summing records for detector '" << det << "' - omitting the "
+                 << orig_samples.size() << " records for this detector." << endl;
+          }//try / catch - to sum the measurements for this sample
+        }//if( det_meas.size() == 1 ) / else 2 or more detectors
+      }//for( const string &det : orig_dets )
+      
+      info.remove_measurements( info.measurements() );
+      for( auto m : keepers )
+        info.add_measurement( m, false );
+      
+      info.set_uuid( "" );
+      info.cleanup_after_load( SpecUtils::SpecFile::CleanupAfterLoadFlags::DontChangeOrReorderSamples );
+    }//if( sum_samples_per_det )
     
     if( format == SpecUtils::SaveSpectrumAsType::Chn
        || format == SpecUtils::SaveSpectrumAsType::SpcBinaryInt
