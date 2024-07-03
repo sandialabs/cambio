@@ -2124,12 +2124,15 @@ int run_command_util( const int argc, char *argv[] )
         //Calibrations I've seen:
         //"CmpEnCal", and "LinEnCal"
         //"2.5MeV" vs "9MeV"
+        //{"EnergyCalibration", "LowEnergyCalibration", vs "FullEnergyCalibration"}
         
         string prefered_variant;
         for( const auto str : cals )
         {
           if( SpecUtils::icontains( str, "Lin") )
             prefered_variant = str;
+          //else if( SpecUtils::iequals_ascii( str, "EnergyCalibration") )
+          //  prefered_variant = str;
         }//for( const auto &str : cals )
         
         if( prefered_variant.empty() )
@@ -2173,7 +2176,7 @@ int run_command_util( const int argc, char *argv[] )
         
         if( prefered_variant.size() )
         {
-          info.keep_energy_cal_variant( prefered_variant );
+          info.keep_energy_cal_variants( { prefered_variant } );
         }else
         {
           cerr << "Couldn't identify a preferred energy variant out of {";
@@ -2499,7 +2502,7 @@ int run_command_util( const int argc, char *argv[] )
         case DetectiveEX:
           for( size_t i = 0; i < meass.size(); ++i )
             if( !meass[i]->contained_neutron() )
-              info.set_contained_neutrons( true, 0.0, meass[i] );
+              info.set_contained_neutrons( true, 0.0, meass[i], -1.0f );
 
           if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx )
             break;
@@ -2513,7 +2516,7 @@ int run_command_util( const int argc, char *argv[] )
           
         case DetectiveDX:
           for( size_t i = 0; i < meass.size(); ++i )
-            info.set_contained_neutrons( false, 0.0f, meass[i] );
+            info.set_contained_neutrons( false, 0.0f, meass[i], -1.0f );
           
           if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx )
             break;
@@ -2539,7 +2542,7 @@ int run_command_util( const int argc, char *argv[] )
         case DetectiveEX100:
           for( size_t i = 0; i < meass.size(); ++i )
             if( !meass[i]->contained_neutron() )
-              info.set_contained_neutrons( true, 0.0, meass[i] );
+              info.set_contained_neutrons( true, 0.0, meass[i], -1.0f );
 
           if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx100 )
             break;
@@ -2553,7 +2556,7 @@ int run_command_util( const int argc, char *argv[] )
           
         case DetectiveDX100:
           for( size_t i = 0; i < meass.size(); ++i )
-            info.set_contained_neutrons( false, 0.0f, meass[i] );
+            info.set_contained_neutrons( false, 0.0f, meass[i], -1.0f );
           
           if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx100 )
             break;
