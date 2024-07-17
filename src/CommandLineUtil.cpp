@@ -601,7 +601,7 @@ int run_command_util( const int argc, char *argv[] )
               " N42 (defaults to 2012 variant), 2012N42, 2006N42,"
               " CHN (binary integer variant), SPC (defaults to int variant),"
               " INTSPC, FLTSPC, SPE (IAEA format), asciispc (ASCII version of"
-              " SPC), TKA, gr130 (256 channel binary format), CNF"
+              " SPC), TKA, gr130 (256 channel binary format), CNF, or CALp (energy calibration only),"
 #if( SpecUtils_ENABLE_D3_CHART )
               ", html (webpage plot), json (chart data in json format, equiv to '--format=html --html-output=json')"
 #endif
@@ -635,7 +635,6 @@ int run_command_util( const int argc, char *argv[] )
      "By default not recursive, see 'recursive' option."
     )
     ("recursive", po::value<bool>(&recursive)->default_value(false)->implicit_value(true),
-     "[Experimental - use at own risk] "
      "When 'inputdir' is used, specifying this to be true will result in files"
      " being converted in not just the directory specified, but all of its"
      " descendant directories.  The output directory structure will mirror"
@@ -874,7 +873,7 @@ int run_command_util( const int argc, char *argv[] )
 //  instance of basic_option<charT> will be added to result,
 //  with 'unrecognized' field set to 'true'. It's possible to
 //  collect all unrecognized options with the 'collect_unrecognized'
-//  funciton.
+//  function.
 //  */
 //  basic_command_line_parser& allow_unregistered();
   
@@ -1004,9 +1003,10 @@ int run_command_util( const int argc, char *argv[] )
 #endif
 
 #if( SpecUtils_ENABLE_URI_SPECTRA )
-  str_to_save_type["uri"]                 = SpecUtils::SaveSpectrumAsType::Uri;
+  str_to_save_type["uri"]        = SpecUtils::SaveSpectrumAsType::Uri;
 #endif
 
+  str_to_save_type["calp"]       = SpecUtils::SaveSpectrumAsType::NumTypes;
   
   //spec_exts: extensions of files that we can read.
   const string spec_exts[] = { "txt", "csv", "pcf", "xml", "n42", "chn",
@@ -1061,7 +1061,6 @@ int run_command_util( const int argc, char *argv[] )
       inputfiles = SpecUtils::ls_files_in_directory(inputdir);
   }//if( !inputdir.empty()  )
   
-
   
   if( inputfiles.empty() || inputfiles[0].empty() )
   {
@@ -1074,6 +1073,9 @@ int run_command_util( const int argc, char *argv[] )
     return 2;
   }//if( inputfiles.empty() )
   
+  
+  SpecUtils::trim( outputformatstr );
+  SpecUtils::to_lower_ascii( outputformatstr );
   
   if( outputname.empty() )
   {
@@ -1127,8 +1129,12 @@ int run_command_util( const int argc, char *argv[] )
      && ((inputfiles.size() == 1) || combine_all_files) )
   {
     const string::size_type pos = outputname.find_last_of( '.' );
-    if( (pos != string::npos) && (pos < (outputname.size()-1)) )
-      outputformatstr = outputname.substr(pos+1);
+    if( (pos != string::npos) && (pos < (outputname.size() - 1)) )
+    {
+      outputformatstr = outputname.substr( pos + 1 );
+      SpecUtils::trim( outputformatstr );
+      SpecUtils::to_lower_ascii( outputformatstr );
+    }
   }//if( outputformatstr.empty() )
   
   
@@ -1139,9 +1145,6 @@ int run_command_util( const int argc, char *argv[] )
     return 4;
   }//if( outputformatstr.empty() && inputfiles.size() > 1 )
   
-  
-  SpecUtils::trim( outputformatstr );
-  SpecUtils::to_lower_ascii( outputformatstr );
     
   if( str_to_save_type.find(outputformatstr) == str_to_save_type.end() )
   {
@@ -1263,6 +1266,35 @@ int run_command_util( const int argc, char *argv[] )
     outdir = SpecUtils::parent_path(outputname);
   }
   
+  
+  assert( (outputformatstr == "calp") == (format == SpecUtils::SaveSpectrumAsType::NumTypes) );
+  if( outputformatstr == "calp" )
+  {
+    // If we are making a CALp file, we can only have one input file, and we can not specify
+    //  an input CALp file
+    if( !calp_file.empty() )
+    {
+      cerr << "You can specify to output a CALp file (--format option),"
+              " and specify an input CALp file (--CALp-file option)." << endl;
+      return 37;
+    }
+    
+    if( inputfiles.size() != 1 )
+    {
+      // We could relax this and let users make multiple CALp files at once, but I think
+      //  the chance of confusion is too great, so we'll keep this option restricted.
+      cerr << "When creating a CALp file, you can only specify a single input file." << endl;
+      return 38;
+    }
+    
+    if( combine_all_files )
+    {
+      cerr << "The '--combine-input-files' option can not be used when creating CALp file." << endl;
+      return 39;
+    }
+  }//if( outputformatstr == "calp" )
+  
+  
   if( !calp_file.empty() && !SpecUtils::is_file(calp_file) )
   {
     cerr << "Specified CALp file is not a file." << endl;
@@ -1300,6 +1332,14 @@ int run_command_util( const int argc, char *argv[] )
   
   
   string ending = suggestedNameEnding( format );
+  
+  if( format == SpecUtils::SaveSpectrumAsType::NumTypes )
+  {
+    assert( outputformatstr == "calp" );
+    ending = "CALp";
+  }//if( format == SpecUtils::SaveSpectrumAsType::NumTypes )
+  
+  
   
  #if( SpecUtils_ENABLE_D3_CHART )
   if( format == SpecUtils::SaveSpectrumAsType::HtmlD3 )
@@ -1792,8 +1832,9 @@ int run_command_util( const int argc, char *argv[] )
           }//foreach( const int detnum, detnums )
         }//foreach( const int sample, samplenums )
       }//if( we should sum all of then and then save ) / else
-    }else  //if( a single spectrum output format )
+    }else if( format != SpecUtils::SaveSpectrumAsType::NumTypes )
     {
+      // a single spectrum output format
       if( !force_writing && SpecUtils::is_file(saveto) )
       {
         cerr << "Output file '" << saveto << "' existed, and --force not"
@@ -2085,6 +2126,88 @@ int run_command_util( const int argc, char *argv[] )
       {
         cout << "Saved '" << saveto << "'" << endl;
       }
+    }else //if( we are writing a CALp file )
+    {
+      assert( (outputformatstr == "calp") == (format == SpecUtils::SaveSpectrumAsType::NumTypes) );
+    
+      // a single spectrum output format
+      if( !force_writing && SpecUtils::is_file(saveto) )
+      {
+        cerr << "Output file '" << saveto << "' existed, and --force not"
+        << " specified, not saving file" << endl;
+        file_existed = true;
+        return make_pair(false, file_existed);
+      }//if( !force_writing && SpecUtils::is_file(savename) )
+      
+      size_t num_written = 0;
+      stringstream calp_contents;
+    
+      set<string> dets_so_far;
+      
+      //Note that disp_detectors has both gamma and neutron detectors, but we only care about gamma
+      const vector<string> &gamma_detectors = info.gamma_detector_names();
+      const vector<string> &all_detectors = info.detector_names();
+      const vector<string> &neut_dets = info.neutron_detector_names();
+      
+      for( const int sample : info.sample_numbers() )
+      {
+        for( const string &det : all_detectors )
+        {
+          if( dets_so_far.count(det) )
+            continue;
+          
+          const shared_ptr<const SpecUtils::Measurement> m = info.measurement( sample, det );
+          shared_ptr<const SpecUtils::EnergyCalibration> cal = m ? m->energy_calibration() : nullptr;
+          
+          if( !cal || !cal->valid() || (cal->num_channels() < 3) )
+          {
+            // We'll assume that a detector that only has neutrons, will always only have neutrons...
+            //  TODO: this may not actually be that good of an assumptions; re-evaluate later.
+            if( std::find(begin(neut_dets), end(neut_dets), det) != end(neut_dets) )
+              dets_so_far.insert( det );
+            
+            continue;
+          }//if( energy cal is not valid )
+          
+          // Dont write the detector name if its unambiguous
+          const string detname = (gamma_detectors.size() == 1) ? string() : det;
+          
+          if( SpecUtils::write_CALp_file(calp_contents, cal, detname) )
+          {
+            num_written += 1;
+            dets_so_far.insert( det );
+          }else
+          {
+            cerr << "Error writing CALp for detector '" << detname << "'" << endl;
+          }
+        }//for( const string det : all_detectors )
+        
+        if( all_detectors.size() == dets_so_far.size() )
+          break;
+      }//for( const int sample : m_interspec->displayedSamples(type) )
+      
+      
+      if( num_written == 0 )
+      {
+        cerr << "Failed to create CALp file contents for " << saveto << endl;
+        opened_all_output_files = false;
+        return make_pair(false, file_existed);
+      }//if( num_written == 0 )
+      
+#ifdef _WIN32
+      ofstream output( convert_from_utf8_to_utf16(saveto).c_str(), ios_base::binary | ios_base::out );
+#else
+      ofstream output( saveto.c_str(), ios_base::binary | ios_base::out );
+#endif
+      
+      if( !output.is_open() )
+      {
+        cerr << "Failed to open output file " << saveto << endl;
+        opened_all_output_files = false;
+        return make_pair(false, file_existed);
+      }
+      
+      output << calp_contents.str() << endl;
     }//if( a single spectrum output format )
     
     const bool full_success = (opened_all_output_files && encoded_all_files);
@@ -2127,12 +2250,15 @@ int run_command_util( const int argc, char *argv[] )
         //Calibrations I've seen:
         //"CmpEnCal", and "LinEnCal"
         //"2.5MeV" vs "9MeV"
+        //{"EnergyCalibration", "LowEnergyCalibration", vs "FullEnergyCalibration"}
         
         string prefered_variant;
         for( const auto str : cals )
         {
           if( SpecUtils::icontains( str, "Lin") )
             prefered_variant = str;
+          //else if( SpecUtils::iequals_ascii( str, "EnergyCalibration") )
+          //  prefered_variant = str;
         }//for( const auto &str : cals )
         
         if( prefered_variant.empty() )
@@ -2424,9 +2550,8 @@ int run_command_util( const int argc, char *argv[] )
       const string::size_type pos = savename.find_last_of( '.' );
       if( pos && (pos != string::npos) && (pos < (savename.size()-1)) )
       {
-        string ext = savename.substr(pos+1);
-        SpecUtils::to_lower_ascii( ext );
-        if( ext != ending )
+        const string ext = savename.substr(pos+1);
+        if( !SpecUtils::iequals_ascii( ext, ending )  )
           savename += "." + ending;
       }else
       {
@@ -2503,6 +2628,7 @@ int run_command_util( const int argc, char *argv[] )
           for( size_t i = 0; i < meass.size(); ++i )
             if( !meass[i]->contained_neutron() )
               info.set_contained_neutrons( true, 0.0, meass[i], 0.0f );
+              info.set_contained_neutrons( true, 0.0, meass[i], -1.0f );
 
           if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx )
             break;
@@ -2517,6 +2643,7 @@ int run_command_util( const int argc, char *argv[] )
         case DetectiveDX:
           for( size_t i = 0; i < meass.size(); ++i )
             info.set_contained_neutrons( false, 0.0f, meass[i], 0.0f );
+            info.set_contained_neutrons( false, 0.0f, meass[i], -1.0f );
           
           if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx )
             break;
@@ -2543,6 +2670,7 @@ int run_command_util( const int argc, char *argv[] )
           for( size_t i = 0; i < meass.size(); ++i )
             if( !meass[i]->contained_neutron() )
               info.set_contained_neutrons( true, 0.0, meass[i], 0.0f );
+              info.set_contained_neutrons( true, 0.0, meass[i], -1.0f );
 
           if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx100 )
             break;
@@ -2557,6 +2685,7 @@ int run_command_util( const int argc, char *argv[] )
         case DetectiveDX100:
           for( size_t i = 0; i < meass.size(); ++i )
             info.set_contained_neutrons( false, 0.0f, meass[i], 0.0f );
+            info.set_contained_neutrons( false, 0.0f, meass[i], -1.0f );
           
           if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx100 )
             break;
