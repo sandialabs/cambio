@@ -96,13 +96,11 @@ namespace {
     ostr << "<script>" << D3SpectrumExport::spectrum_chart_d3_js() << "</script>" << endline;
     ostr << "<script>" << D3SpectrumExport::spectrum_chart_setup_js() << "</script>" << endline;
     ostr << "<style>" << D3SpectrumExport::spectrum_char_d3_css() << "</style>" << endline;
-    ostr << "<style>" << D3SpectrumExport::spectrum_chart_d3_standalone_css() << "</style>" << endline;
 #else
     ostr << "<script>" << file_to_string( D3SpectrumExport::d3_js_filename() ) << "</script>" << endline;
     ostr << "<script>" << file_to_string( D3SpectrumExport::spectrum_chart_d3_js_filename() ) << "</script>" << endline;
     ostr << "<script>" << D3SpectrumExport::spectrum_chart_setup_js() << "</script>" << endline;
     ostr << "<style>" << file_to_string( D3SpectrumExport::spectrum_char_d3_css_filename() ) << "</style>" << endline;
-    ostr << "<style>" << file_to_string( D3SpectrumExport::spectrum_chart_d3_standalone_css() ) << "</style>" << endline;
 #endif
     
     ostr << "</head>" << endline;
@@ -2045,7 +2043,22 @@ int run_command_util( const int argc, char *argv[] )
               output << "<script>" << endline;
               write_js_for_chart( output, div_id, fileopts.m_dataTitle, fileopts.m_xAxisTitle, fileopts.m_yAxisTitle );
               write_and_set_data_for_chart( output, div_id, htmlinput );
-              output << "window.addEventListener('resize',function(){spec_chart_" << div_id << ".handleResize();});" << endline;
+              
+              output <<
+                "const resizeChart_" << div_id << " = function(){\n"
+                "  let height = window.innerHeight;\n"
+                "  let width = window.innerWidth; \n"
+                "  let el = spec_chart_" << div_id << ".chart;\n"
+                "  el.style.width = (width - 40) + \"px\";\n"
+                "  el.style.height = Math.max(250, Math.min(0.4*width,height-175)) + \"px\";\n"
+                "  el.style.marginLeft = \"20px\";\n"
+                "  el.style.marginRight = \"20px\";\n"
+                "  spec_chart_" << div_id << ".handleResize();\n"
+                "};\n"
+                "resizeChart_" << div_id << "();\n"
+                "window.addEventListener('resize', resizeChart_" << div_id << ");\n";
+              //output << "window.addEventListener('resize',function(){spec_chart_" << div_id << ".handleResize();});" << endline;
+              
               write_set_options_for_chart( output, div_id, fileopts );
               output << "</script>" << endline;
               
