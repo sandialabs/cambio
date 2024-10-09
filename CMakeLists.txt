@@ -1,4 +1,6 @@
-cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
+
+set (CMAKE_SYSTEM_VERSION 5.1 CACHE TYPE INTERNAL FORCE)
 
 project(cambio)
 
@@ -24,7 +26,7 @@ IF(NOT CMAKE_BUILD_TYPE)
 ENDIF(NOT CMAKE_BUILD_TYPE)
 
 
-set( Boost_USE_STATIC_RUNTIME OFF )
+#set( Boost_USE_STATIC_RUNTIME OFF )
 
 if(WIN32)
     if( NOT MyQT_DIR )
@@ -48,7 +50,7 @@ if(WIN32)
     endforeach()
 
 	#Set multiprocess build and to target Win7 SP1 (0x0601==Win7, 0x0501==WinXP)
-	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /DWINVER=0x0601 /D_WIN32_WINNT=0x0601" )
+  set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /DWINVER=0x0601 /D_WIN32_WINNT=0x0601" )
 
 	# Lets make sure we can run on Win7 still - not entirely sure how to do this correctly
 	#set( WIN_SDK_VERSION "8.1" ) #"10.0.15063.0"
@@ -153,7 +155,7 @@ if( BUILD_CAMBIO_COMMAND_LINE )
   set( headers ${headers} cambio/CommandLineUtil.h )
   set( sources ${sources} src/CommandLineUtil.cpp )
   
-  find_package( Boost 1.68 REQUIRED COMPONENTS program_options )
+  find_package( Boost 1.60 REQUIRED COMPONENTS program_options )
 endif( BUILD_CAMBIO_COMMAND_LINE )
 
 if( NOT BUILD_CAMBIO_GUI AND NOT BUILD_CAMBIO_COMMAND_LINE )
@@ -253,7 +255,7 @@ if( BUILD_CAMBIO_GUI )
 	  #target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\lib\\Qt5PrintSupport.lib"  )
 	  #target_link_libraries( ${PROJECT_NAME} "${MyQT_DIR}\\plugins\\printsupport\\windowsprintersupport.lib"  )
 
-    target_link_libraries( ${PROJECT_NAME} PRIVATE "imm32.lib" "Ws2_32.lib" "winmm.lib" "Mincore.lib" "Dwmapi.lib" "Wtsapi32.lib" "Pathcch.lib" "Shlwapi.lib" "Version.lib" )
+    target_link_libraries( ${PROJECT_NAME} PRIVATE "imm32.lib" "Ws2_32.lib" "winmm.lib" "Mincore.lib" "Dwmapi.lib" "Wtsapi32.lib" "Shlwapi.lib" "Version.lib" ) # You may also need "Pathcch.lib"
   else()
     link_directories( ${MyQT_DIR}/lib )
     link_directories( ${MyQT_DIR}/plugins/platforms )

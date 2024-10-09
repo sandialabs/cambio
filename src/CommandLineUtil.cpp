@@ -18,6 +18,7 @@
  */
 
 #include <set>
+#include <deque>
 #include <cctype>
 #include <string>
 #include <deque>
@@ -1126,8 +1127,12 @@ int run_command_util( const int argc, char *argv[] )
      && ((inputfiles.size() == 1) || combine_all_files) )
   {
     const string::size_type pos = outputname.find_last_of( '.' );
-    if( (pos != string::npos) && (pos < (outputname.size()-1)) )
-      outputformatstr = outputname.substr(pos+1);
+    if( (pos != string::npos) && (pos < (outputname.size() - 1)) )
+    {
+      outputformatstr = outputname.substr( pos + 1 );
+      SpecUtils::trim( outputformatstr );
+      SpecUtils::to_lower_ascii( outputformatstr );
+    }
   }//if( outputformatstr.empty() )
   
   
@@ -1247,7 +1252,6 @@ int run_command_util( const int argc, char *argv[] )
     no_background_spec = no_foreground_spec = no_intrinsic_spec = no_unknown_spec = true;
   if( intrinsic_only )
     no_background_spec = no_foreground_spec = no_calibration_spec = no_unknown_spec = true;
-
   
   string outdir, outname;
   if( SpecUtils::is_directory(outputname) )
@@ -1528,6 +1532,9 @@ int run_command_util( const int argc, char *argv[] )
 #endif
 #if( SpecUtils_ENABLE_URI_SPECTRA )
     , num_uris, uri_encode_options
+#endif
+#if( SpecUtils_INJA_TEMPLATES )
+     , template_file, strip_template_blocks
 #endif
   ]( SpecUtils::SpecFile &info,
     const SpecUtils::SaveSpectrumAsType format,
@@ -2036,7 +2043,22 @@ int run_command_util( const int argc, char *argv[] )
               output << "<script>" << endline;
               write_js_for_chart( output, div_id, fileopts.m_dataTitle, fileopts.m_xAxisTitle, fileopts.m_yAxisTitle );
               write_and_set_data_for_chart( output, div_id, htmlinput );
-              output << "window.addEventListener('resize',function(){spec_chart_" << div_id << ".handleResize();});" << endline;
+              
+              output <<
+                "const resizeChart_" << div_id << " = function(){\n"
+                "  let height = window.innerHeight;\n"
+                "  let width = window.innerWidth; \n"
+                "  let el = spec_chart_" << div_id << ".chart;\n"
+                "  el.style.width = (width - 40) + \"px\";\n"
+                "  el.style.height = Math.max(250, Math.min(0.4*width,height-175)) + \"px\";\n"
+                "  el.style.marginLeft = \"20px\";\n"
+                "  el.style.marginRight = \"20px\";\n"
+                "  spec_chart_" << div_id << ".handleResize();\n"
+                "};\n"
+                "resizeChart_" << div_id << "();\n"
+                "window.addEventListener('resize', resizeChart_" << div_id << ");\n";
+              //output << "window.addEventListener('resize',function(){spec_chart_" << div_id << ".handleResize();});" << endline;
+              
               write_set_options_for_chart( output, div_id, fileopts );
               output << "</script>" << endline;
               
@@ -2293,7 +2315,7 @@ int run_command_util( const int argc, char *argv[] )
         
         if( prefered_variant.size() )
         {
-          info.keep_energy_cal_variants( { prefered_variant } );
+          info.keep_energy_cal_variants( {prefered_variant} );
         }else
         {
           cerr << "Couldn't identify a preferred energy variant out of {";
@@ -2395,7 +2417,7 @@ int run_command_util( const int argc, char *argv[] )
           }//try / catch
         }//if( nremoved )
       };//remove_type(...)
-      
+
       if( no_background_spec )
         remove_type( SpecUtils::SourceType::Background );
       
@@ -2541,9 +2563,8 @@ int run_command_util( const int argc, char *argv[] )
       const string::size_type pos = savename.find_last_of( '.' );
       if( pos && (pos != string::npos) && (pos < (savename.size()-1)) )
       {
-        string ext = savename.substr(pos+1);
-        SpecUtils::to_lower_ascii( ext );
-        if( ext != ending )
+        const string ext = savename.substr(pos+1);
+        if( !SpecUtils::iequals_ascii( ext, ending )  )
           savename += "." + ending;
       }else
       {
@@ -2619,6 +2640,7 @@ int run_command_util( const int argc, char *argv[] )
         case DetectiveEX:
           for( size_t i = 0; i < meass.size(); ++i )
             if( !meass[i]->contained_neutron() )
+              info.set_contained_neutrons( true, 0.0, meass[i], 0.0f );
               info.set_contained_neutrons( true, 0.0, meass[i], -1.0f );
 
           if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx )
@@ -2633,6 +2655,7 @@ int run_command_util( const int argc, char *argv[] )
           
         case DetectiveDX:
           for( size_t i = 0; i < meass.size(); ++i )
+            info.set_contained_neutrons( false, 0.0f, meass[i], 0.0f );
             info.set_contained_neutrons( false, 0.0f, meass[i], -1.0f );
           
           if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx )
@@ -2659,6 +2682,7 @@ int run_command_util( const int argc, char *argv[] )
         case DetectiveEX100:
           for( size_t i = 0; i < meass.size(); ++i )
             if( !meass[i]->contained_neutron() )
+              info.set_contained_neutrons( true, 0.0, meass[i], 0.0f );
               info.set_contained_neutrons( true, 0.0, meass[i], -1.0f );
 
           if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx100 )
@@ -2673,6 +2697,7 @@ int run_command_util( const int argc, char *argv[] )
           
         case DetectiveDX100:
           for( size_t i = 0; i < meass.size(); ++i )
+            info.set_contained_neutrons( false, 0.0f, meass[i], 0.0f );
             info.set_contained_neutrons( false, 0.0f, meass[i], -1.0f );
           
           if( info.detector_type() == SpecUtils::DetectorType::DetectiveEx100 )
