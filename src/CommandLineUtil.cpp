@@ -95,13 +95,11 @@ namespace {
     ostr << "<script>" << D3SpectrumExport::spectrum_chart_d3_js() << "</script>" << endline;
     ostr << "<script>" << D3SpectrumExport::spectrum_chart_setup_js() << "</script>" << endline;
     ostr << "<style>" << D3SpectrumExport::spectrum_char_d3_css() << "</style>" << endline;
-    ostr << "<style>" << D3SpectrumExport::spectrum_chart_d3_standalone_css() << "</style>" << endline;
 #else
     ostr << "<script>" << file_to_string( D3SpectrumExport::d3_js_filename() ) << "</script>" << endline;
     ostr << "<script>" << file_to_string( D3SpectrumExport::spectrum_chart_d3_js_filename() ) << "</script>" << endline;
     ostr << "<script>" << D3SpectrumExport::spectrum_chart_setup_js() << "</script>" << endline;
     ostr << "<style>" << file_to_string( D3SpectrumExport::spectrum_char_d3_css_filename() ) << "</style>" << endline;
-    ostr << "<style>" << file_to_string( D3SpectrumExport::spectrum_chart_d3_standalone_css() ) << "</style>" << endline;
 #endif
     
     ostr << "</head>" << endline;
@@ -2731,6 +2729,7 @@ int run_command_util( const int argc, char *argv[] )
     
       if( info.measurements().empty() )
       {
+        wrote_all = false;
         //encoded_all_files = false;
         cerr << "After filtering, '" << inname << "' had no spectra left to write - skipping." << endl;
         continue;
