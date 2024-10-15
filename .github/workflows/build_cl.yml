@@ -34,3 +34,6 @@ jobs:
         with:
           path: ${{ github.workspace }}/source-code
           submodules: true # Recursively checkout submodules
+
+      - name: Setup Dev Env 
+        uses: ${{ github.workspace }}/source-code/.github/actions/setup_dev_env
