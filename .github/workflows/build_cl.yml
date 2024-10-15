@@ -38,39 +38,7 @@ jobs:
       - name: Setup Dev Env 
         uses: ./source-code/.github/actions/setup_dev_env
     
-      - name: Initialconfig/build
-        shell: pwsh
-        working-directory: ${{runner.temp}}
-        run: |
-          if (-Not (Test-Path 'build_${{ runner.os }}_cl')){ mkdir build_${{ runner.os }}_cl }
-          cd build_${{ runner.os }}_cl
-          $prefix = "${{runner.temp}}/install"
-          $install_dir = "cambio_cl_latest"
-          cmake --source "${{ github.workspace }}/source-code" --build "${{runner.temp}}/build_${{ runner.os }}_cl" -DBUILD_CAMBIO_GUI=OFF -DBUILD_CAMBIO_COMMAND_LINE=ON -DSpecUtils_INJA_TEMPLATES=ON -DSpecUtils_ENABLE_URI_SPECTRA=ON -DSpecUtils_ENABLE_D3_CHART=ON -DSpecUtils_D3_SUPPORT_FILE_STATIC=ON -DSpecUtils_FLT_PARSE_METHOD=FromChars -DSpecUtils_SHARED_LIB=OFF -DCMAKE_INSTALL_PREFIX="$install_dir" -DCMAKE_PREFIX_PATH="${{runner.temp}}\install" -DNO_CMAKE_SYSTEM_PATH=ON -DCMAKE_FIND_USE_CMAKE_SYSTEM_PATH=OFF -DCMAKE_BUILD_TYPE="Release" -DCMAKE_CONFIGURATION_TYPES="Release" -DCMAKE_CONFIGURATION_TYPES="Release"
-          cmake --build "${{runner.temp}}/build_${{ runner.os }}_cl" --config Release
-          ls
-          ls "${{runner.temp}}/build_${{ runner.os }}_cl"
-          ls "${{runner.temp}}/build_${{ runner.os }}_cl/Release"
-      # Remove old zip file
-          Get-ChildItem cambio_cl_${{ runner.os }}*.zip | foreach { Remove-Item -Path $_.FullName }
-          echo "After removing old zip files"
-          ls
-          if (Test-Path -Path "cambio_cl_${{ runner.os }}" ){ Remove-Item -Path "cambio_cl_${{ runner.os }}" -Recurse -Force }
-          mkdir "cambio_cl_${{ runner.os }}"
-          cp "${{runner.temp}}/build_${{ runner.os }}_cl/Release/*.exe" "${{runner.temp}}/build_${{ runner.os }}_cl/cambio_cl_${{ runner.os }}/"
-      # Make some notes
-          $notes = "cambio_cl_${{ runner.os }}\build_info.txt"
-          echo "This is an automated build of cambio_cl for ${{ runner.os }} built on the github infrastruction at $(date)" >> $notes
-          echo "No testing has been performed on this build." >> $notes
-          echo "cambio code git has SHA: ${{ github.sha }}" >> $notes
-          echo "Contact cambio@sandia.gov for support." >> $notes
-          echo "Before zipping, files present for the bbuild are:"
-          ls
-          ls .\cambio_cl_${{ runner.os }}
-      # create a zip file
-          Compress-Archive -CompressionLevel Optimal -Path .\cambio_cl_${{ runner.os }} -DestinationPath cambio_cl_${{ runner.os }}_${{ runner.os }}_$(get-date -f yyyy-MM-dd).zip 
-          echo "After zipping, files present for the build are:"
-          ls
+      
 
       # Update the bleeding-edge tag to be current commit
       - name: Run latest-tag
