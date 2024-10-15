@@ -51,10 +51,4 @@ jobs:
           ls
           ls "${{runner.temp}}/build_${{ runner.os }}_cl"
           ls "${{runner.temp}}/build_${{ runner.os }}_cl/Release"
-        # Remove old zip file
-          Get-ChildItem cambio_cl_${{ runner.os }}*.zip | foreach { Remove-Item -Path $_.FullName }
-          echo "After removing old zip files"
-          ls
-          if (Test-Path -Path "cambio_cl_${{ runner.os }}" ){ Remove-Item -Path "cambio_cl_${{ runner.os }}" -Recurse -Force }
-          mkdir "cambio_cl_${{ runner.os }}"
-          
+        
