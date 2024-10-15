@@ -12,7 +12,7 @@ runs:
     # Get CMake, see https://github.com/marketplace/actions/get-cmake
     - name: get-cmake
       uses: lukka/get-cmake@v3.24.3
-      
+
     #Now go to using: https://github.com/marketplace/actions/run-cmake     
     - name: Print some info
       shell: cmd
@@ -24,15 +24,14 @@ runs:
         echo "The files in the repository:
         ls ${{ github.workspace }}
   
-  # TODO: the below needs an if to only run on windows
     - name: Cache Windows Dependencies
       if: runner.os == 'Windows'
       id: cache-deps
       uses: actions/cache@v3
       with:
         path: '${{runner.temp}}/install'
-        key: ${{ runner.os }}-dependencies-${{ hashFiles('${{ github.workspace }}\source-code\tools\build_cl_dependencies_msvc2022.bat') }}
-    
+        key: ${{ runner.os }}-dependencies-${{ hashFiles('${{ github.workspace }}/source-code/tools/build_cl_dependencies_msvc2022.bat') }}
+
 # TODO: dep_build_msvc2022.bat seems to work just fine from PowerShell, so we should really switch to just always using that to be consistent across platforms
     - name: Build dependencies on windows
       shell: cmd
@@ -44,7 +43,7 @@ runs:
         echo github.workflow: ${{ github.workflow }}
         ${{ github.workspace }}\source-code\tools\build_cl_dependencies_msvc2022.bat "${{runner.temp}}\dep_build" "${{runner.temp}}\install"
 
-        
+
     - name: List files in prefix
       shell: pwsh
       run: |
