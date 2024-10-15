@@ -62,7 +62,7 @@ jobs:
           $notes = "cambio_cl_${{ runner.os }}\build_info.txt"
           echo "This is an automated build of cambio_cl for ${{ runner.os }} built on the github infrastruction at $(date)" >> $notes
           echo "No testing has been performed on this build." >> $notes
-          echo "cambio code git has SHA: ${{ github.sha }}" >> $notes
+          echo "cambio code git has SHA ${{ github.sha }}" >> $notes
           echo "Contact cambio@sandia.gov for support." >> $notes
           echo "Before zipping, files present for the bbuild are:"
           ls
