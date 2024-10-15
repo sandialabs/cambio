@@ -31,7 +31,7 @@ runs:
       uses: actions/cache@v3
       with:
         path: '${{runner.temp}}/install'
-        key: ${{ runner.os }}-dependencies-${{ hashFiles('**/build_cl_dependencies_msvc2022.bat') }}
+        key: ${{ runner.os }}-dependencies-${{ hashFiles('${{ github.workspace }}\source-code\tools\build_cl_dependencies_msvc2022.bat') }}
     
 # TODO: dep_build_msvc2022.bat seems to work just fine from PowerShell, so we should really switch to just always using that to be consistent across platforms
     - name: Build dependencies on windows
@@ -42,7 +42,7 @@ runs:
         echo github.event.action: ${{ github.event.action }}
         echo github.event_name: ${{ github.event_name }}
         echo github.workflow: ${{ github.workflow }}
-        ${{ github.workspace }}\tools\build_cl_dependencies_msvc2022.bat "${{runner.temp}}\dep_build" "${{runner.temp}}\install"
+        ${{ github.workspace }}\source-code\tools\build_cl_dependencies_msvc2022.bat "${{runner.temp}}\dep_build" "${{runner.temp}}\install"
 
         
     - name: List files in prefix
