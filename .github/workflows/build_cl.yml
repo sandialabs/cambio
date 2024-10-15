@@ -47,7 +47,7 @@ jobs:
           $prefix = "${{runner.temp}}/install"
           $install_dir = "cambio_cl_latest"
           cmake -S "${{runner.temp}}/build_${{ runner.os }}_cl" -B "${{ github.workspace }}/source-code" -DBUILD_CAMBIO_GUI=OFF -DBUILD_CAMBIO_COMMAND_LINE=ON -DSpecUtils_INJA_TEMPLATES=ON -DSpecUtils_ENABLE_URI_SPECTRA=ON -DSpecUtils_ENABLE_D3_CHART=ON -DSpecUtils_D3_SUPPORT_FILE_STATIC=ON -DSpecUtils_FLT_PARSE_METHOD=FromChars -DSpecUtils_SHARED_LIB=OFF -DCMAKE_INSTALL_PREFIX="$install_dir" -DCMAKE_PREFIX_PATH="${{runner.temp}}\install" -DNO_CMAKE_SYSTEM_PATH=ON -DCMAKE_FIND_USE_CMAKE_SYSTEM_PATH=OFF -DCMAKE_BUILD_TYPE="Release" -DCMAKE_CONFIGURATION_TYPES="Release" -DCMAKE_CONFIGURATION_TYPES="Release"
-          cmake --build . --config Release
+          cmake --build "${{runner.temp}}/build_${{ runner.os }}_cl" --config Release
           ls
       # TODO: make a zip of the exe
 
