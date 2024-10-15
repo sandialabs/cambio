@@ -34,10 +34,10 @@ jobs:
         with:
           path: ${{ github.workspace }}/source-code
           submodules: true # Recursively checkout submodules
-    
+
       - name: Setup Dev Env 
         uses: ./source-code/.github/actions/setup_dev_env
-    
+
       - name: Initialconfig/build
         shell: pwsh
         working-directory: ${{runner.temp}}
