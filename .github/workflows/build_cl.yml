@@ -82,7 +82,7 @@ jobs:
           artifacts: '${{runner.temp}}\build_${{ runner.os }}_cl\cambio_cl_${{ runner.os }}*.zip'
           draft: false
           prerelease: true
-          body: "An automated, and untested build of the "command line" version of cambio, with the latest code pushed to the repository, for Windows."
+          body: 'An automated, and untested build of the "command line" version of cambio, with the latest code pushed to the repository, for Windows.'
           allowUpdates: true
           generateReleaseNotes: false
           name: "Development Build"
