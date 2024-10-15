@@ -34,26 +34,12 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Cache source code
-        uses: actions/cache@v3
-        with:
-          path: ${{runner.temp}}/source-code
-          key: ${{ runner.os }}-source
-          restore-keys: |
-            ${{ runner.os }}-source-
-
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          path: ${{runner.temp}}/source-code
-          fetch-depth: 0   # Fetch all history for all branches and tags
+          path: ${{ github.workspace }}/source-code
           submodules: true # Recursively checkout submodules
-
-      - name: Pull latest changes
-        run: |
-          cd ${{runner.temp}}/source-code
-          git pull origin main
-      
+    
       - name: Setup Dev Env 
         uses: ./.github/actions/setup_dev_env
     
@@ -65,9 +51,10 @@ jobs:
           cd build_${{ runner.os }}_cl
           $prefix = "${{runner.temp}}/install"
           $install_dir = "cambio_cl_latest"
-          cmake -S "${{runner.temp}}/build_${{ runner.os }}_cl" -B "${{runner.temp}}/source-code" -DBUILD_CAMBIO_GUI=OFF -DBUILD_CAMBIO_COMMAND_LINE=ON -DSpecUtils_INJA_TEMPLATES=ON -DSpecUtils_ENABLE_URI_SPECTRA=ON -DSpecUtils_ENABLE_D3_CHART=ON -DSpecUtils_D3_SUPPORT_FILE_STATIC=ON -DSpecUtils_FLT_PARSE_METHOD=FromChars -DSpecUtils_SHARED_LIB=OFF -DCMAKE_INSTALL_PREFIX="$install_dir" -DCMAKE_PREFIX_PATH="${{runner.temp}}\install" -DNO_CMAKE_SYSTEM_PATH=ON -DCMAKE_FIND_USE_CMAKE_SYSTEM_PATH=OFF -DCMAKE_BUILD_TYPE="Release" -DCMAKE_CONFIGURATION_TYPES="Release" -DCMAKE_CONFIGURATION_TYPES="Release"
+          cmake -S "${{runner.temp}}/build_${{ runner.os }}_cl" -B "${{ github.workspace }}/source-code" -DBUILD_CAMBIO_GUI=OFF -DBUILD_CAMBIO_COMMAND_LINE=ON -DSpecUtils_INJA_TEMPLATES=ON -DSpecUtils_ENABLE_URI_SPECTRA=ON -DSpecUtils_ENABLE_D3_CHART=ON -DSpecUtils_D3_SUPPORT_FILE_STATIC=ON -DSpecUtils_FLT_PARSE_METHOD=FromChars -DSpecUtils_SHARED_LIB=OFF -DCMAKE_INSTALL_PREFIX="$install_dir" -DCMAKE_PREFIX_PATH="${{runner.temp}}\install" -DNO_CMAKE_SYSTEM_PATH=ON -DCMAKE_FIND_USE_CMAKE_SYSTEM_PATH=OFF -DCMAKE_BUILD_TYPE="Release" -DCMAKE_CONFIGURATION_TYPES="Release" -DCMAKE_CONFIGURATION_TYPES="Release"
           cmake --build . --config Release
           ls
+      # TODO: make a zip of the exe
 
       # Update the bleeding-edge tag to be current commit
       - name: Run latest-tag
