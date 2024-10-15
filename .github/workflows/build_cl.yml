@@ -29,11 +29,6 @@ jobs:
 
 
     steps:
-      - name: Set up Git
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
@@ -41,7 +36,7 @@ jobs:
           submodules: true # Recursively checkout submodules
     
       - name: Setup Dev Env 
-        uses: ./.github/actions/setup_dev_env
+        uses: ${{ github.workspace }}/source-code/.github/actions/setup_dev_env
     
       - name: Initialconfig/build
         shell: pwsh
