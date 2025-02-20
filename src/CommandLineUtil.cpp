@@ -1536,6 +1536,9 @@ int run_command_util( const int argc, char *argv[] )
 #if( SpecUtils_INJA_TEMPLATES )
      , template_file, strip_template_blocks
 #endif
+#ifndef NDEBUG
+    , outputformatstr
+#endif
   ]( SpecUtils::SpecFile &info,
     const SpecUtils::SaveSpectrumAsType format,
     const string &saveto, const string &inname ) 
