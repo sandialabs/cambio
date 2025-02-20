@@ -256,8 +256,8 @@ namespace
   };
    */
   
-  /** If necassary, renames detectors so the start of detector names are
-   consistent with N42 naming convention - primarily useful for appllications
+  /** If necessary, renames detectors so the start of detector names are
+   consistent with N42 naming convention - primarily useful for applications
    that rely on detector names.
    
    @param info The measurement to try normalizing the names of
@@ -551,6 +551,7 @@ int run_command_util( const int argc, char *argv[] )
   bool no_calibration_spec, no_unknown_spec;
   bool background_only, foreground_only, calibration_only, intrinsic_only;
   bool sum_det_per_sample, sum_samples_per_det;
+  bool no_derived, only_derived;
   //bool spectra_of_likely_interest_only;
   vector<string> detector_renaimings, detectors_to_include, detectors_to_exclude;
   
@@ -683,39 +684,47 @@ int run_command_util( const int argc, char *argv[] )
     // "Filters out all spectra, except the ones you probably want to analyze."
     // " Some formats like HPRDS N42 files come with lots of records you probably dont want to deal with."
     //)
-    ("no-background-spec", po::value<bool>(&no_background_spec)->default_value(false),
+    ("no-background-spec", po::value<bool>(&no_background_spec)->default_value(false)->implicit_value(true),
       "Removes all spectra explicitly marked, or inferred from file format, as backgrounds."
     )
-    ("no-foreground-spec", po::value<bool>(&no_foreground_spec)->default_value(false),
+    ("no-foreground-spec", po::value<bool>(&no_foreground_spec)->default_value(false)->implicit_value(true),
      "Removes all spectra explicitly marked, or inferred from file format, as foreground."
      " Input files with a single spectrum will be assumed as foreground, unless"
      " explicitly marked otherwise within the file."
     )
-    ("no-intrinsic-spec", po::value<bool>(&no_intrinsic_spec)->default_value(false),
+    ("no-intrinsic-spec", po::value<bool>(&no_intrinsic_spec)->default_value(false)->implicit_value(true),
      "Removes all spectra explicitly marked, or inferred from file format, as"
      " the detectors intrinsic radiation spectrum set at the factory."
     )
-    ("no-calibration-spec", po::value<bool>(&no_calibration_spec)->default_value(false),
+    ("no-calibration-spec", po::value<bool>(&no_calibration_spec)->default_value(false)->implicit_value(true),
      "Removes all spectra explicitly marked, or inferred from file format, as"
      " calibration spectra."
     )
-    ("no-unknown-spec", po::value<bool>(&no_unknown_spec)->default_value(false),
+    ("no-unknown-spec", po::value<bool>(&no_unknown_spec)->default_value(false)->implicit_value(true),
      "Removes all spectra that do not have their type explicitly marked or"
      " designated by the file format.  For files that have a single spectrum,"
      " unless it is explicitly marked, it will be assumed a foreground."
     )
-    ("background-only", po::value<bool>(&background_only)->default_value(false),
+    ("background-only", po::value<bool>(&background_only)->default_value(false)->implicit_value(true),
      "Only allow spectra marked as background to be written to the output."
     )
-    ("foreground-only", po::value<bool>(&foreground_only)->default_value(false),
+    ("foreground-only", po::value<bool>(&foreground_only)->default_value(false)->implicit_value(true),
      "Filter out all none-foreground spectra."
      " Input files with a single unmarked sample will be assumed as foreground."
     )
-    ("calibration-only", po::value<bool>(&calibration_only)->default_value(false),
+    ("calibration-only", po::value<bool>(&calibration_only)->default_value(false)->implicit_value(true),
      "Filter out all spectra not marked as calibration."
     )
-    ("intrinsic-only", po::value<bool>(&intrinsic_only)->default_value(false),
+    ("intrinsic-only", po::value<bool>(&intrinsic_only)->default_value(false)->implicit_value(true),
      "Filter out all spectra not marked as intrinsic."
+    )
+    ("derived-only", po::value<bool>(&only_derived)->default_value(false)->implicit_value(true),
+     "All non-derived data will be removed.\n\t"
+     "Derived data is frequently data that has been summed, background subtracted,"
+     " or otherwise manipulated for use by the detectors RID algothim."
+    )
+    ("no-derived", po::value<bool>(&no_derived)->default_value(false)->implicit_value(true),
+     "All derived data will be removed."
     )
     ( "sum-all-spectra", po::value<bool>(&sum_all_spectra)->default_value(false)->implicit_value(true),
        "Sum all spectra in each of the input files, which pass any optional"
@@ -1161,6 +1170,14 @@ int run_command_util( const int argc, char *argv[] )
       
     return 4;
   }//if( user specified invalid type )
+  
+  
+  if( only_derived && no_derived )
+  {
+    cerr << "You can not specify both 'derived-only' and 'no-derived' to be true." << endl;
+    return 40;
+  }//if( only_derived && no_derived )
+  
   
   SpecUtils::SaveSpectrumAsType format = str_to_save_type[outputformatstr];
   
@@ -2435,6 +2452,39 @@ int run_command_util( const int argc, char *argv[] )
       
       if( no_unknown_spec )
         remove_type( SpecUtils::SourceType::Unknown );
+      
+      
+      auto remove_derived_or_nonderived = [&info,inname,prefilter_samples]( const bool remove_derived ){
+        int nremoved = 0;
+        vector<shared_ptr<const SpecUtils::Measurement>> meass = info.measurements();
+        for( shared_ptr<const SpecUtils::Measurement> &m : meass )
+        {
+          const bool is_derived = m->derived_data_properties();
+          if( remove_derived == is_derived )
+          {
+            ++nremoved;
+            info.remove_measurement( m, false );
+          }
+        }//for( loop over measurements )
+        
+        if( nremoved )
+        {
+          try
+          {
+            info.set_uuid( "" );
+            info.cleanup_after_load();
+          }catch( std::exception &e )
+          {
+            cerr << "Error removing (non)-derived spectra from '" << inname << "': " << e.what() << endl;
+          }//try / catch
+        }//if( nremoved )
+      };//remove_type(...)
+      
+      if( only_derived )
+        remove_derived_or_nonderived( false );
+      
+      if( no_derived )
+        remove_derived_or_nonderived( true );
       
       if( sum_all_spectra )
       {
