@@ -798,7 +798,7 @@ SaveWidget::SaveWidget( QWidget *parent , Qt::WindowFlags f )
   m_saveDirectory = new QLineEdit;
 #if defined(__APPLE__) && !defined(IOS)
   m_saveDirectory->setEnabled( false );
-  m_saveDirectory->setText( "Downloads" );
+  m_saveDirectory->setText( "" );
 #endif
   namelayout->addWidget( m_saveDirectory, 1, 0 );
   QPushButton *browse = new QPushButton( "Browse..." );
@@ -1298,8 +1298,13 @@ void SaveWidget::browseForDirectory()
 #else
     m_saveDirectory->setText( selecteddirs[0] );
 #endif
+
+    m_saveButton->setEnabled( !!m_measurment );
+  }else
+  {
+    m_saveButton->setEnabled( false );
   }//if( selecteddirs.length() > 0 )
-}//void browseForDirectory()e
+}//void browseForDirectory()
 
 
 void SaveWidget::formatChanged()
@@ -1648,7 +1653,7 @@ void SaveWidget::updateDisplay( std::shared_ptr<SpecUtils::SpecFile> meas,
 
 #if defined(__APPLE__) && !defined(IOS)
   if( path.isEmpty() )
-    m_saveDirectory->setText( "Downloads" );
+    m_saveDirectory->setText( "" );
 #else
   QSettings settings;
   if( path.size() < 2 )
@@ -1675,7 +1680,9 @@ void SaveWidget::updateDisplay( std::shared_ptr<SpecUtils::SpecFile> meas,
 #endif
 
   QDir dir( path );
-  m_saveButton->setEnabled( !!m_measurment && dir.exists() && dir.isReadable() );
+  const bool dir_exists = dir.exists();
+  const bool dir_is_readable = dir.isReadable();
+  m_saveButton->setEnabled( path.size() && !!m_measurment && dir_exists && dir_is_readable );
 
   if( !m_measurment )
     return;
