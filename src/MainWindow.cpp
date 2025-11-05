@@ -989,7 +989,7 @@ void MainWindow::calculateTimeSeriesData(
   }//foreach( const int sample_number, sample_numbers )
   
   grosscounts->set_gamma_counts( gamma_counts, 0.0f, 0.0f );
-  grosscounts->set_neutron_counts( *nuetron_counts );
+  grosscounts->set_neutron_counts( *nuetron_counts, -1.0 );
   
   if( ntimes )
   {
