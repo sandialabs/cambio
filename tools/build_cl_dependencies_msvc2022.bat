@@ -69,15 +69,15 @@ cd %BUILD_DIR%
 set errorlevel=
 
 rem Build/install boost
-set BOOST_TAR=boost_1_78_0.tar.gz
-set BOOST_DIR=boost_1_78_0
+set BOOST_TAR=boost_1_86_0.zip
+set BOOST_DIR=boost_1_86_0
 set BOOST_BUILT_FILE=built_%BOOST_DIR%
-set BOOST_REQUIRED_SHA256=f22143b5528e081123c3c5ed437e92f648fe69748e95fa6e2bd41484e2986cc3
+set BOOST_REQUIRED_SHA256=cd20a5694e753683e1dc2ee10e2d1bb11704e65893ebcc6ced234ba68e5d8646
 
 if not exist %BOOST_BUILT_FILE% (
 
     if not exist %BOOST_TAR% (
-        curl -L https://sourceforge.net/projects/boost/files/boost/1.78.0/boost_1_78_0.zip/download --output %BOOST_TAR% && (
+        curl -L https://archives.boost.io/release/1.86.0/source/boost_1_86_0.zip --output %BOOST_TAR% && (
             echo Downloaded Boost
         ) || (
             echo Error downloading boost
