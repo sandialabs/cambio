@@ -18,7 +18,7 @@ jobs:
         config: 
         - {
             name: "Windows Latest MSVC-2022",
-            os: windows-latest,
+            os: windows-2022,
             artifact: "windows_msvc2022.7z",
             build_type: "Release",
             cc: "cl",
